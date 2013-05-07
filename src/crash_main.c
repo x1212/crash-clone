@@ -4,7 +4,10 @@
 #include <SDL/SDL_mixer.h>
 
 
+
+
 #define SCREEN_RES 800, 480, 32
+#define SCREEN_MODE /*|SDL_FULLSCREEN*/
 
 
 void game( void );
@@ -20,7 +23,7 @@ void initMain( void )
     
     // SDL initialisation
     SDL_Init( SDL_INIT_VIDEO | SDL_INIT_AUDIO );
-    screen = SDL_SetVideoMode( SCREEN_RES, SDL_HWSURFACE | SDL_DOUBLEBUF );
+    screen = SDL_SetVideoMode( SCREEN_RES, SDL_HWSURFACE | SDL_DOUBLEBUF SCREEN_MODE );
 
 }
 

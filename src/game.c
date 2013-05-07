@@ -9,8 +9,8 @@
 #define false 0
 
 
-#define ARENA_H 400
-#define ARENA_W 400
+#define ARENA_H 250
+#define ARENA_W 250
 #define ARENA_BORDER 60
 
 #define BORDER_TILE_STATE 0
@@ -40,21 +40,46 @@
 extern int state;
 extern SDL_Surface *screen;
 
-SDL_Surface *tileset;
+SDL_Surface *tileset, *looser, *winner;
 Uint8 *keystate;
 int camX, camY;
 int botdir[4], botcooldown[4]; // player counts as bot as well ...
+int gamestate;
+#define NOT_ENDED_STATE 0
+#define WINNER_STATE 1
+#define LOOSER_STATE 2
+int timeout; // number of turns until state is set to menu
+int activebots; // number of bots still in the game
 
 void initGame( int* data1, int* data2 )
 {
     int x, y;
     camX = 0; camY = 0;
+    timeout = -1;
+    gamestate = NOT_ENDED_STATE;
+    activebots = 3;
+    srand(time(NULL) + SDL_GetTicks());
     
     printf("\nInit new Game.\n");
     if ( tileset == NULL)
     {
         tileset = SDL_LoadBMP("../data/tiles.bmp");
     }
+    if ( looser == NULL)
+    {
+        looser = SDL_LoadBMP("../data/looser.bmp");
+        SDL_SetAlpha(looser, SDL_SRCALPHA /*| SDL_RLEACCEL*/, SDL_ALPHA_OPAQUE);
+        looser->format->Amask = 0xFF000000;
+        looser->format->Ashift = 24; 
+    }
+    if ( winner == NULL)
+    {
+        winner = SDL_LoadBMP("../data/winner.bmp");
+        SDL_SetAlpha(winner, SDL_SRCALPHA /*| SDL_RLEACCEL*/, SDL_ALPHA_OPAQUE);
+        winner->format->Amask = 0xFF000000;
+        winner->format->Ashift = 24; 
+    }
+
     
     // generate initial arena
     for ( x = 0; x < ARENA_W; x++ )
@@ -139,12 +164,54 @@ void game( void )
     }
 
     SDL_Delay(100);
+    
+    // gamestate stuff
+    if ( timeout > 0 )
+    {
+        timeout--;
+    } else if ( timeout == 0 )
+    {
+        SDL_Event event;
+        state = 0;
+        while ( SDL_PollEvent( &event ) )
+        { /* do nothing, we only want all events to be thrown away before returning to menu */}
+        firstrun = true;
+    }
+
+    if ( gamestate == WINNER_STATE )
+    {
+
+        SDL_Rect src, dst;
+        src.w = 800; src.h = 480;
+        dst.w = 800; dst.h = 480;
+
+        src.x = 0; src.y = 0;
+        dst.x = 0; dst.y = 0;
+    
+        SDL_BlitSurface( winner, &src, screen, &dst );
+
+
+    }
+    else if ( gamestate == LOOSER_STATE )
+    {
+
+        SDL_Rect src, dst;
+        src.w = 800; src.h = 480;
+        dst.w = 800; dst.h = 480;
+
+        src.x = 0; src.y = 0;
+        dst.x = 0; dst.y = 0;
+    
+        SDL_BlitSurface( looser, &src, screen, &dst );
+
+
+    }
 }
 
 
 void handleKeyStates( void )
 {
-    if ( keystate[SDLK_ESCAPE] )
+    if ( keystate[SDLK_ESCAPE] | keystate[SDLK_END] )
     {
         SDL_Event event;
         state = 0;
@@ -310,66 +377,66 @@ void drawGrid( int* data, int w, int h )
 
                     case GREEN_WALL_TILE_STATE:
                         tile2draw = 45;
-                        if ( *(data+(y*ARENA_W + x - 1)) == RED_WALL_TILE_STATE ) // left wall?
+                        if ( *(data+(y*ARENA_W + x - 1)) == GREEN_WALL_TILE_STATE ) // left wall?
                         {
-                            if ( *(data+(y*ARENA_W + x + 1)) == RED_WALL_TILE_STATE ) // right wall?
+                            if ( *(data+(y*ARENA_W + x + 1)) == GREEN_WALL_TILE_STATE ) // right wall?
                             {
-                                if ( *(data+((y-1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // upper wall?
+                                if ( *(data+((y-1)*ARENA_W + x)) == GREEN_WALL_TILE_STATE ) // upper wall?
                                 {
-                                    if ( *(data+((y+1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // wall bellow?
+                                    if ( *(data+((y+1)*ARENA_W + x)) == GREEN_WALL_TILE_STATE ) // wall bellow?
                                     {
                                         tile2draw = 60;
                                     }
                                     else tile2draw = 56;
                                 }
-                                else if ( *(data+((y+1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // wall bellow?
+                                else if ( *(data+((y+1)*ARENA_W + x)) == GREEN_WALL_TILE_STATE ) // wall bellow?
                                 {
                                     tile2draw = 57;
                                 }
                                 else tile2draw = 50;
                             }
-                            else if ( *(data+((y-1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // upper wall?
+                            else if ( *(data+((y-1)*ARENA_W + x)) == GREEN_WALL_TILE_STATE ) // upper wall?
                             {
-                                if ( *(data+((y+1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // wall bellow?
+                                if ( *(data+((y+1)*ARENA_W + x)) == GREEN_WALL_TILE_STATE ) // wall bellow?
                                 {
                                     tile2draw = 58;
                                 }
                                 else tile2draw = 52;
                             }
-                            else if ( *(data+((y+1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // wall bellow?
+                            else if ( *(data+((y+1)*ARENA_W + x)) == GREEN_WALL_TILE_STATE ) // wall bellow?
                             {
                                 tile2draw = 54;
                             }
-                            else tile2draw = 46;
+                            else tile2draw = 47;
 
                         }
-                        else if ( *(data+(y*ARENA_W + x + 1)) == RED_WALL_TILE_STATE ) // right wall?
+                        else if ( *(data+(y*ARENA_W + x + 1)) == GREEN_WALL_TILE_STATE ) // right wall?
                         {
-                            if ( *(data+((y-1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // upper wall?
+                            if ( *(data+((y-1)*ARENA_W + x)) == GREEN_WALL_TILE_STATE ) // upper wall?
                             {
-                                if ( *(data+((y+1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // wall bellow?
+                                if ( *(data+((y+1)*ARENA_W + x)) == GREEN_WALL_TILE_STATE ) // wall bellow?
                                 {
                                     tile2draw = 59;
                                 }
                                 else tile2draw = 53;
                             }
-                            else if ( *(data+((y+1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // wall bellow?
+                            else if ( *(data+((y+1)*ARENA_W + x)) == GREEN_WALL_TILE_STATE ) // wall bellow?
                             {
                                 tile2draw = 55;
                             }
-                            else tile2draw = 47;
+                            else tile2draw = 46;
 
                         }
-                        else if ( *(data+((y-1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // upper wall?
+                        else if ( *(data+((y-1)*ARENA_W + x)) == GREEN_WALL_TILE_STATE ) // upper wall?
                         {
-                            if ( *(data+((y+1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // wall bellow?
+                            if ( *(data+((y+1)*ARENA_W + x)) == GREEN_WALL_TILE_STATE ) // wall bellow?
                             {
                                 tile2draw = 51;
                             }
                             else tile2draw = 49;
 
                         }
-                        else if ( *(data+((y+1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // wall bellow?
+                        else if ( *(data+((y+1)*ARENA_W + x)) == GREEN_WALL_TILE_STATE ) // wall bellow?
                         {
                             tile2draw = 48;
                         }
@@ -378,66 +445,66 @@ void drawGrid( int* data, int w, int h )
 
                     case BLUE_WALL_TILE_STATE:
                         tile2draw = 61;
-                        if ( *(data+(y*ARENA_W + x - 1)) == RED_WALL_TILE_STATE ) // left wall?
+                        if ( *(data+(y*ARENA_W + x - 1)) == BLUE_WALL_TILE_STATE ) // left wall?
                         {
-                            if ( *(data+(y*ARENA_W + x + 1)) == RED_WALL_TILE_STATE ) // right wall?
+                            if ( *(data+(y*ARENA_W + x + 1)) == BLUE_WALL_TILE_STATE ) // right wall?
                             {
-                                if ( *(data+((y-1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // upper wall?
+                                if ( *(data+((y-1)*ARENA_W + x)) == BLUE_WALL_TILE_STATE ) // upper wall?
                                 {
-                                    if ( *(data+((y+1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // wall bellow?
+                                    if ( *(data+((y+1)*ARENA_W + x)) == BLUE_WALL_TILE_STATE ) // wall bellow?
                                     {
                                         tile2draw = 76;
                                     }
                                     else tile2draw = 72;
                                 }
-                                else if ( *(data+((y+1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // wall bellow?
+                                else if ( *(data+((y+1)*ARENA_W + x)) == BLUE_WALL_TILE_STATE ) // wall bellow?
                                 {
                                     tile2draw = 73;
                                 }
                                 else tile2draw = 66;
                             }
-                            else if ( *(data+((y-1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // upper wall?
+                            else if ( *(data+((y-1)*ARENA_W + x)) == BLUE_WALL_TILE_STATE ) // upper wall?
                             {
-                                if ( *(data+((y+1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // wall bellow?
+                                if ( *(data+((y+1)*ARENA_W + x)) == BLUE_WALL_TILE_STATE ) // wall bellow?
                                 {
                                     tile2draw = 74;
                                 }
                                 else tile2draw = 68;
                             }
-                            else if ( *(data+((y+1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // wall bellow?
+                            else if ( *(data+((y+1)*ARENA_W + x)) == BLUE_WALL_TILE_STATE ) // wall bellow?
                             {
                                 tile2draw = 70;
                             }
                             else tile2draw = 63;
 
                         }
-                        else if ( *(data+(y*ARENA_W + x + 1)) == RED_WALL_TILE_STATE ) // right wall?
+                        else if ( *(data+(y*ARENA_W + x + 1)) == BLUE_WALL_TILE_STATE ) // right wall?
                         {
-                            if ( *(data+((y-1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // upper wall?
+                            if ( *(data+((y-1)*ARENA_W + x)) == BLUE_WALL_TILE_STATE ) // upper wall?
                             {
-                                if ( *(data+((y+1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // wall bellow?
+                                if ( *(data+((y+1)*ARENA_W + x)) == BLUE_WALL_TILE_STATE ) // wall bellow?
                                 {
                                     tile2draw = 75;
                                 }
                                 else tile2draw = 69;
                             }
-                            else if ( *(data+((y+1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // wall bellow?
+                            else if ( *(data+((y+1)*ARENA_W + x)) == BLUE_WALL_TILE_STATE ) // wall bellow?
                             {
                                 tile2draw = 71;
                             }
                             else tile2draw = 62;
 
                         }
-                        else if ( *(data+((y-1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // upper wall?
+                        else if ( *(data+((y-1)*ARENA_W + x)) == BLUE_WALL_TILE_STATE ) // upper wall?
                         {
-                            if ( *(data+((y+1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // wall bellow?
+                            if ( *(data+((y+1)*ARENA_W + x)) == BLUE_WALL_TILE_STATE ) // wall bellow?
                             {
                                 tile2draw = 67;
                             }
                             else tile2draw = 65;
 
                         }
-                        else if ( *(data+((y+1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // wall bellow?
+                        else if ( *(data+((y+1)*ARENA_W + x)) == BLUE_WALL_TILE_STATE ) // wall bellow?
                         {
                             tile2draw = 64;
                         }
@@ -448,66 +515,66 @@ void drawGrid( int* data, int w, int h )
 
                     case YELLOW_WALL_TILE_STATE:
                         tile2draw = 77;
-                        if ( *(data+(y*ARENA_W + x - 1)) == RED_WALL_TILE_STATE ) // left wall?
+                        if ( *(data+(y*ARENA_W + x - 1)) == YELLOW_WALL_TILE_STATE ) // left wall?
                         {
-                            if ( *(data+(y*ARENA_W + x + 1)) == RED_WALL_TILE_STATE ) // right wall?
+                            if ( *(data+(y*ARENA_W + x + 1)) == YELLOW_WALL_TILE_STATE ) // right wall?
                             {
-                                if ( *(data+((y-1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // upper wall?
+                                if ( *(data+((y-1)*ARENA_W + x)) == YELLOW_WALL_TILE_STATE ) // upper wall?
                                 {
-                                    if ( *(data+((y+1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // wall bellow?
+                                    if ( *(data+((y+1)*ARENA_W + x)) == YELLOW_WALL_TILE_STATE ) // wall bellow?
                                     {
                                         tile2draw = 92;
                                     }
                                     else tile2draw = 88;
                                 }
-                                else if ( *(data+((y+1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // wall bellow?
+                                else if ( *(data+((y+1)*ARENA_W + x)) == YELLOW_WALL_TILE_STATE ) // wall bellow?
                                 {
                                     tile2draw = 89;
                                 }
                                 else tile2draw = 82;
                             }
-                            else if ( *(data+((y-1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // upper wall?
+                            else if ( *(data+((y-1)*ARENA_W + x)) == YELLOW_WALL_TILE_STATE ) // upper wall?
                             {
-                                if ( *(data+((y+1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // wall bellow?
+                                if ( *(data+((y+1)*ARENA_W + x)) == YELLOW_WALL_TILE_STATE ) // wall bellow?
                                 {
                                     tile2draw = 90;
                                 }
                                 else tile2draw = 84;
                             }
-                            else if ( *(data+((y+1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // wall bellow?
+                            else if ( *(data+((y+1)*ARENA_W + x)) == YELLOW_WALL_TILE_STATE ) // wall bellow?
                             {
                                 tile2draw = 86;
                             }
                             else tile2draw = 79;
 
                         }
-                        else if ( *(data+(y*ARENA_W + x + 1)) == RED_WALL_TILE_STATE ) // right wall?
+                        else if ( *(data+(y*ARENA_W + x + 1)) == YELLOW_WALL_TILE_STATE ) // right wall?
                         {
-                            if ( *(data+((y-1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // upper wall?
+                            if ( *(data+((y-1)*ARENA_W + x)) == YELLOW_WALL_TILE_STATE ) // upper wall?
                             {
-                                if ( *(data+((y+1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // wall bellow?
+                                if ( *(data+((y+1)*ARENA_W + x)) == YELLOW_WALL_TILE_STATE ) // wall bellow?
                                 {
                                     tile2draw = 91;
                                 }
                                 else tile2draw = 85;
                             }
-                            else if ( *(data+((y+1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // wall bellow?
+                            else if ( *(data+((y+1)*ARENA_W + x)) == YELLOW_WALL_TILE_STATE ) // wall bellow?
                             {
                                 tile2draw = 87;
                             }
                             else tile2draw = 78;
 
                         }
-                        else if ( *(data+((y-1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // upper wall?
+                        else if ( *(data+((y-1)*ARENA_W + x)) == YELLOW_WALL_TILE_STATE ) // upper wall?
                         {
-                            if ( *(data+((y+1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // wall bellow?
+                            if ( *(data+((y+1)*ARENA_W + x)) == YELLOW_WALL_TILE_STATE ) // wall bellow?
                             {
                                 tile2draw = 83;
                             }
                             else tile2draw = 81;
 
                         }
-                        else if ( *(data+((y+1)*ARENA_W + x)) == RED_WALL_TILE_STATE ) // wall bellow?
+                        else if ( *(data+((y+1)*ARENA_W + x)) == YELLOW_WALL_TILE_STATE ) // wall bellow?
                         {
                             tile2draw = 80;
                         }
@@ -530,6 +597,158 @@ void drawGrid( int* data, int w, int h )
     }
 }
 
+int getDist( int *data, int dir, int x, int y)
+{
+    int i, currentDist = 0;
+    for ( i = 1; i < 100; i++ )
+    {
+        switch (dir)
+        {
+            case DIR_U:
+                if ( *(data+((y-i)*ARENA_W + x)) != FLOOR_TILE_STATE )
+                {
+                    return i;
+                }
+                break;
+
+            case DIR_D:
+                if ( *(data+((y+i)*ARENA_W + x)) != FLOOR_TILE_STATE )
+                {
+                    return i;
+                }
+                break;
+
+            case DIR_L:
+                if ( *(data+(y*ARENA_W + x - i)) != FLOOR_TILE_STATE )
+                {
+                    return i;
+                }
+                break;
+
+            case DIR_R:
+                if ( *(data+(y*ARENA_W + x + i)) != FLOOR_TILE_STATE )
+                {
+                    return i;
+                }
+                break;
+            default:
+                break;
+        }
+    }
+    return currentDist;
+}
+
+void ai( int *data, int x, int y )
+{
+    int botID;
+    int dice;
+    int currentDist; // distance to next obstracle in current dir
+
+    switch ( *(data+(y*ARENA_W + x)) )
+    {
+        case CPU_GREEN_CAR_TILE_STATE:
+            botID = 1;
+            break;
+
+        case CPU_BLUE_CAR_TILE_STATE:
+            botID = 2;
+            break;
+
+        case CPU_YELLOW_CAR_TILE_STATE:
+            botID = 3;
+            break;
+
+        default:
+            return;
+    }
+    
+    currentDist = getDist( data, botdir[botID], x, y );
+    
+    dice = rand()%100;
+    if ( currentDist < 5 && dice > 50 )
+    {
+        //if (botID==2) printf( "%d:%d->%d\n", botID, botdir[botID], dice%4 );
+        if (dice%4*2 != (botdir[botID]+4)%8) botdir[botID] = dice%4*2;
+        if ( getDist( data, botdir[botID], x, y) < 5 ) // checks current dir for beeing 'free'
+        {
+            botdir[botID] += 2;
+            if ( getDist( data, botdir[botID], x, y) < 5 ) 
+            {
+                botdir[botID] += 2;
+                if ( getDist( data, botdir[botID], x, y) < 5 )
+                {
+                    botdir[botID] += 2;
+                    if ( getDist( data, botdir[botID], x, y) < 5 ) botdir[botID] += 2;
+                }
+            }
+        }
+    }
+    else if ( currentDist < 3 && dice > 10 )
+    {
+        //if (botID==2) printf( "%d:%d->%d\n", botID, botdir[botID], dice%4 );
+        if (dice%4*2 != (botdir[botID]+4)%8) botdir[botID] = dice%4*2;
+        if ( getDist( data, botdir[botID], x, y) < 3 ) // checks current dir for beeing 'free'
+        {
+            botdir[botID] += 2;
+            if ( getDist( data, botdir[botID], x, y) < 3 ) 
+            {
+                botdir[botID] += 2;
+                if ( getDist( data, botdir[botID], x, y) < 3 )
+                {
+                    botdir[botID] += 2;
+                    if ( getDist( data, botdir[botID], x, y) < 3 ) botdir[botID] += 2;
+                }
+            }
+        }
+    }
+    else if ( currentDist < 2 && dice > 0 )
+    {
+        printf( "%d:%d->%d\n", botID, botdir[botID], dice%4 );
+        if (dice%4*2 != (botdir[botID]+4)%8) botdir[botID] = dice%4*2;
+        if ( getDist( data, botdir[botID], x, y) < 2 ) // checks current dir for beeing 'free'
+        {
+            botdir[botID] += 2;
+            if ( getDist( data, botdir[botID], x, y) < 2 ) 
+            {
+                botdir[botID] += 2;
+                if ( getDist( data, botdir[botID], x, y) < 2 )
+                {
+                    botdir[botID] += 2;
+                    if ( getDist( data, botdir[botID], x, y) < 2 ) botdir[botID] += 2;
+                }
+            }
+        }
+        printf( "%d:%d  dist:%d\n", botID, botdir[botID], getDist(data,botdir[botID],x,y) );
+    }
+    else if ( dice > 75 )
+    {
+        int distu, distd, distr, distl;
+        distu = getDist(data, DIR_U, x, y);
+        distd = getDist(data, DIR_D, x, y);
+        distr = getDist(data, DIR_R, x, y);
+        distl = getDist(data, DIR_L, x, y);
+        if ( distu > distd && distu > distl && distu > distr ) botdir[botID] = DIR_U;
+        if ( distd > distu && distd > distl && distd > distr ) botdir[botID] = DIR_D;
+        if ( distl > distd && distl > distu && distl > distr ) botdir[botID] = DIR_L;
+        if ( distr > distd && distr > distl && distr > distu ) botdir[botID] = DIR_R;
+        if ( getDist( data, botdir[botID], x, y) < 1 ) // checks current dir for beeing 'free'
+        {
+            botdir[botID] += 2;
+            if ( getDist( data, botdir[botID], x, y) < 1 ) 
+            {
+                botdir[botID] += 2;
+                if ( getDist( data, botdir[botID], x, y) < 1 )
+                {
+                    botdir[botID] += 2;
+                    if ( getDist( data, botdir[botID], x, y) < 1 ) botdir[botID] += 2;
+                }
+            }
+        }
+
+    }
+    botdir[botID] = botdir[botID]%8;
+    //else printf( "%d \n", dice ); 
+}
 
 void logic( int *data, int *dst, int w, int h )
 {
@@ -560,6 +779,11 @@ void logic( int *data, int *dst, int w, int h )
                             *(dst+(y*ARENA_W + x + 1)) = PLAYER_CAR_TILE_STATE;
                         }
                         else { // destroy
+                            if ( gamestate != WINNER_STATE )
+                            {
+                                gamestate = LOOSER_STATE;
+                                timeout = 15;
+                            }
                             *(dst+(y*ARENA_W + x)) = RED_WALL_TILE_STATE;
                             if (*(data+(y*ARENA_W + x + 1)) != BORDER_TILE_STATE ) *(dst+(y*ARENA_W + x + 1)) = HOLE_TILE_STATE;
                         }
@@ -572,6 +796,11 @@ void logic( int *data, int *dst, int w, int h )
                             *(dst+(y*ARENA_W + x - 1)) = PLAYER_CAR_TILE_STATE;
                         }
                         else { // destroy
+                            if ( gamestate != WINNER_STATE )
+                            {
+                                gamestate = LOOSER_STATE;
+                                timeout = 15;
+                            }
                             *(dst+(y*ARENA_W + x)) = RED_WALL_TILE_STATE;
                             if (*(data+(y*ARENA_W + x - 1)) != BORDER_TILE_STATE ) *(dst+(y*ARENA_W + x - 1)) = HOLE_TILE_STATE;
                         }
@@ -585,6 +814,11 @@ void logic( int *data, int *dst, int w, int h )
                             *(dst+((y-1)*ARENA_W + x)) = PLAYER_CAR_TILE_STATE;
                         }
                         else { // destroy
+                            if ( gamestate != WINNER_STATE )
+                            {
+                                gamestate = LOOSER_STATE;
+                                timeout = 15;
+                            }
                             *(dst+(y*ARENA_W + x)) = RED_WALL_TILE_STATE;
                             if (*(data+((y-1)*ARENA_W + x)) != BORDER_TILE_STATE ) *(dst+((y-1)*ARENA_W + x)) = HOLE_TILE_STATE;
                         }
@@ -598,6 +832,11 @@ void logic( int *data, int *dst, int w, int h )
                             *(dst+((y+1)*ARENA_W + x)) = PLAYER_CAR_TILE_STATE;
                         }
                         else { // destroy
+                            if ( gamestate != WINNER_STATE )
+                            {
+                                gamestate = LOOSER_STATE;
+                                timeout = 15;
+                            }
                             *(dst+(y*ARENA_W + x)) = RED_WALL_TILE_STATE;
                             if (*(data+((y+1)*ARENA_W + x)) != BORDER_TILE_STATE ) *(dst+((y+1)*ARENA_W + x)) = HOLE_TILE_STATE;
                         }
@@ -605,6 +844,455 @@ void logic( int *data, int *dst, int w, int h )
                     }
                     camX = x - 800/16/2;
                     camY = y - 480/16/2;
+                    break;
+
+
+
+
+                case CPU_GREEN_CAR_TILE_STATE:
+                    ai(data,x,y);
+                    if ( botdir[1] == DIR_R )
+                    {
+                        if ( *(data+(y*ARENA_W + x + 1)) == FLOOR_TILE_STATE && *(dst+(y*ARENA_W + x + 1)) == FLOOR_TILE_STATE )
+                        {
+                            *(dst+(y*ARENA_W + x)) = GREEN_WALL_TILE_STATE;
+                            *(dst+(y*ARENA_W + x + 1)) = CPU_GREEN_CAR_TILE_STATE;
+                        }
+                        else { // destroy
+                            switch ( *(dst+(y*ARENA_W + x + 1)) )
+                            {
+                                case PLAYER_CAR_TILE_STATE:
+                                    gamestate = LOOSER_STATE;
+                                    timeout = 15;
+                                    break;
+
+                                case CPU_GREEN_CAR_TILE_STATE:
+                                case CPU_BLUE_CAR_TILE_STATE:
+                                case CPU_YELLOW_CAR_TILE_STATE:
+                                    activebots--;
+                                    break;
+
+                                default:
+                                    break;
+                            }
+
+                            activebots--;
+                            if ( gamestate != LOOSER_STATE && activebots == 0 )
+                            {
+                                gamestate = WINNER_STATE;
+                                timeout = 15;
+                            }
+                            *(dst+(y*ARENA_W + x)) = GREEN_WALL_TILE_STATE;
+                            if (*(data+(y*ARENA_W + x + 1)) != BORDER_TILE_STATE ) *(dst+(y*ARENA_W + x + 1)) = HOLE_TILE_STATE;
+                        }
+                    }
+                    else if ( botdir[1] == DIR_L )
+                    {
+                        if ( *(data+(y*ARENA_W + x - 1)) == FLOOR_TILE_STATE && *(dst+(y*ARENA_W + x - 1)) == FLOOR_TILE_STATE )
+                        {
+                            *(dst+(y*ARENA_W + x)) = GREEN_WALL_TILE_STATE;
+                            *(dst+(y*ARENA_W + x - 1)) = CPU_GREEN_CAR_TILE_STATE;
+                        }
+                        else { // destroy
+                            switch ( *(dst+(y*ARENA_W + x - 1)) )
+                            {
+                                case PLAYER_CAR_TILE_STATE:
+                                    gamestate = LOOSER_STATE;
+                                    timeout = 15;
+                                    break;
+
+                                case CPU_GREEN_CAR_TILE_STATE:
+                                case CPU_BLUE_CAR_TILE_STATE:
+                                case CPU_YELLOW_CAR_TILE_STATE:
+                                    activebots--;
+                                    break;
+
+                                default:
+                                    break;
+                            }
+
+                            activebots--;
+                            if ( gamestate != LOOSER_STATE && activebots == 0 )
+                            {
+                                gamestate = WINNER_STATE;
+                                timeout = 15;
+                            }
+                            *(dst+(y*ARENA_W + x)) = GREEN_WALL_TILE_STATE;
+                            if (*(data+(y*ARENA_W + x - 1)) != BORDER_TILE_STATE ) *(dst+(y*ARENA_W + x - 1)) = HOLE_TILE_STATE;
+                        }
+
+                    }
+                    else if ( botdir[1] == DIR_U )
+                    {
+                        if ( *(data+((y-1)*ARENA_W + x)) == FLOOR_TILE_STATE && *(dst+((y-1)*ARENA_W + x)) == FLOOR_TILE_STATE )
+                        {
+                            *(dst+(y*ARENA_W + x)) = GREEN_WALL_TILE_STATE;
+                            *(dst+((y-1)*ARENA_W + x)) = CPU_GREEN_CAR_TILE_STATE;
+                        }
+                        else { // destroy
+                            switch ( *(dst+((y-1)*ARENA_W + x)) )
+                            {
+                                case PLAYER_CAR_TILE_STATE:
+                                    gamestate = LOOSER_STATE;
+                                    timeout = 15;
+                                    break;
+
+                                case CPU_GREEN_CAR_TILE_STATE:
+                                case CPU_BLUE_CAR_TILE_STATE:
+                                case CPU_YELLOW_CAR_TILE_STATE:
+                                    activebots--;
+                                    break;
+
+                                default:
+                                    break;
+                            }
+
+                            activebots--;
+                            if ( gamestate != LOOSER_STATE && activebots == 0 )
+                            {
+                                gamestate = WINNER_STATE;
+                                timeout = 15;
+                            }
+                            *(dst+(y*ARENA_W + x)) = GREEN_WALL_TILE_STATE;
+                            if (*(data+((y-1)*ARENA_W + x)) != BORDER_TILE_STATE ) *(dst+((y-1)*ARENA_W + x)) = HOLE_TILE_STATE;
+                        }
+
+                    }
+                    else if ( botdir[1] == DIR_D )
+                    {
+                        if ( *(data+((y+1)*ARENA_W + x)) == FLOOR_TILE_STATE && *(dst+((y+1)*ARENA_W + x)) == FLOOR_TILE_STATE )
+                        {
+                            *(dst+(y*ARENA_W + x)) = GREEN_WALL_TILE_STATE;
+                            *(dst+((y+1)*ARENA_W + x)) = CPU_GREEN_CAR_TILE_STATE;
+                        }
+                        else { // destroy
+                            switch ( *(dst+((y+1)*ARENA_W + x)) )
+                            {
+                                case PLAYER_CAR_TILE_STATE:
+                                    gamestate = LOOSER_STATE;
+                                    timeout = 15;
+                                    break;
+
+                                case CPU_GREEN_CAR_TILE_STATE:
+                                case CPU_BLUE_CAR_TILE_STATE:
+                                case CPU_YELLOW_CAR_TILE_STATE:
+                                    activebots--;
+                                    break;
+
+                                default:
+                                    break;
+                            }
+
+                            activebots--;
+                            if ( gamestate != LOOSER_STATE && activebots == 0 )
+                            {
+                                gamestate = WINNER_STATE;
+                                timeout = 15;
+                            }
+                            *(dst+(y*ARENA_W + x)) = GREEN_WALL_TILE_STATE;
+                            if (*(data+((y+1)*ARENA_W + x)) != BORDER_TILE_STATE ) *(dst+((y+1)*ARENA_W + x)) = HOLE_TILE_STATE;
+                        }
+
+                    }
+                    break;
+
+
+                case CPU_BLUE_CAR_TILE_STATE:
+                    ai(data,x,y);
+                    if ( botdir[2] == DIR_R )
+                    {
+                        if ( *(data+(y*ARENA_W + x + 1)) == FLOOR_TILE_STATE && *(dst+(y*ARENA_W + x + 1)) == FLOOR_TILE_STATE )
+                        {
+                            *(dst+(y*ARENA_W + x)) = BLUE_WALL_TILE_STATE;
+                            *(dst+(y*ARENA_W + x + 1)) = CPU_BLUE_CAR_TILE_STATE;
+                        }
+                        else { // destroy
+                            switch ( *(dst+(y*ARENA_W + x + 1)) )
+                            {
+                                case PLAYER_CAR_TILE_STATE:
+                                    gamestate = LOOSER_STATE;
+                                    timeout = 15;
+                                    break;
+
+                                case CPU_GREEN_CAR_TILE_STATE:
+                                case CPU_BLUE_CAR_TILE_STATE:
+                                case CPU_YELLOW_CAR_TILE_STATE:
+                                    activebots--;
+                                    break;
+
+                                default:
+                                    break;
+                            }
+
+                            activebots--;
+                            if ( gamestate != LOOSER_STATE && activebots == 0 )
+                            {
+                                gamestate = WINNER_STATE;
+                                timeout = 15;
+                            }
+                            *(dst+(y*ARENA_W + x)) = BLUE_WALL_TILE_STATE;
+                            if (*(data+(y*ARENA_W + x + 1)) != BORDER_TILE_STATE ) *(dst+(y*ARENA_W + x + 1)) = HOLE_TILE_STATE;
+                        }
+                    }
+                    else if ( botdir[2] == DIR_L )
+                    {
+                        if ( *(data+(y*ARENA_W + x - 1)) == FLOOR_TILE_STATE && *(dst+(y*ARENA_W + x - 1)) == FLOOR_TILE_STATE )
+                        {
+                            *(dst+(y*ARENA_W + x)) = BLUE_WALL_TILE_STATE;
+                            *(dst+(y*ARENA_W + x - 1)) = CPU_BLUE_CAR_TILE_STATE;
+                        }
+                        else { // destroy
+                            switch ( *(dst+(y*ARENA_W + x -1)) )
+                            {
+                                case PLAYER_CAR_TILE_STATE:
+                                    gamestate = LOOSER_STATE;
+                                    timeout = 15;
+                                    break;
+
+                                case CPU_GREEN_CAR_TILE_STATE:
+                                case CPU_BLUE_CAR_TILE_STATE:
+                                case CPU_YELLOW_CAR_TILE_STATE:
+                                    activebots--;
+                                    break;
+
+                                default:
+                                    break;
+                            }
+
+                            activebots--;
+                            if ( gamestate != LOOSER_STATE && activebots == 0 )
+                            {
+                                gamestate = WINNER_STATE;
+                                timeout = 15;
+                            }
+                            *(dst+(y*ARENA_W + x)) = BLUE_WALL_TILE_STATE;
+                            if (*(data+(y*ARENA_W + x - 1)) != BORDER_TILE_STATE ) *(dst+(y*ARENA_W + x - 1)) = HOLE_TILE_STATE;
+                        }
+
+                    }
+                    else if ( botdir[2] == DIR_U )
+                    {
+                        if ( *(data+((y-1)*ARENA_W + x)) == FLOOR_TILE_STATE && *(dst+((y-1)*ARENA_W + x)) == FLOOR_TILE_STATE )
+                        {
+                            *(dst+(y*ARENA_W + x)) = BLUE_WALL_TILE_STATE;
+                            *(dst+((y-1)*ARENA_W + x)) = CPU_BLUE_CAR_TILE_STATE;
+                        }
+                        else { // destroy
+                            switch ( *(dst+((y-1)*ARENA_W + x)) )
+                            {
+                                case PLAYER_CAR_TILE_STATE:
+                                    gamestate = LOOSER_STATE;
+                                    timeout = 15;
+                                    break;
+
+                                case CPU_GREEN_CAR_TILE_STATE:
+                                case CPU_BLUE_CAR_TILE_STATE:
+                                case CPU_YELLOW_CAR_TILE_STATE:
+                                    activebots--;
+                                    break;
+
+                                default:
+                                    break;
+                            }
+
+                            activebots--;
+                            if ( gamestate != LOOSER_STATE && activebots == 0 )
+                            {
+                                gamestate = WINNER_STATE;
+                                timeout = 15;
+                            }
+                            *(dst+(y*ARENA_W + x)) = BLUE_WALL_TILE_STATE;
+                            if (*(data+((y-1)*ARENA_W + x)) != BORDER_TILE_STATE ) *(dst+((y-1)*ARENA_W + x)) = HOLE_TILE_STATE;
+                        }
+
+                    }
+                    else if ( botdir[2] == DIR_D )
+                    {
+                        if ( *(data+((y+1)*ARENA_W + x)) == FLOOR_TILE_STATE && *(dst+((y+1)*ARENA_W + x)) == FLOOR_TILE_STATE )
+                        {
+                            *(dst+(y*ARENA_W + x)) = BLUE_WALL_TILE_STATE;
+                            *(dst+((y+1)*ARENA_W + x)) = CPU_BLUE_CAR_TILE_STATE;
+                        }
+                        else { // destroy
+                            switch ( *(dst+((y+1)*ARENA_W + x)) )
+                            {
+                                case PLAYER_CAR_TILE_STATE:
+                                    gamestate = LOOSER_STATE;
+                                    timeout = 15;
+                                    break;
+
+                                case CPU_GREEN_CAR_TILE_STATE:
+                                case CPU_BLUE_CAR_TILE_STATE:
+                                case CPU_YELLOW_CAR_TILE_STATE:
+                                    activebots--;
+                                    break;
+
+                                default:
+                                    break;
+                            }
+                            activebots--;
+                            if ( gamestate != LOOSER_STATE && activebots == 0 )
+                            {
+                                gamestate = WINNER_STATE;
+                                timeout = 15;
+                            }
+                            *(dst+(y*ARENA_W + x)) = BLUE_WALL_TILE_STATE;
+                            if (*(data+((y+1)*ARENA_W + x)) != BORDER_TILE_STATE ) *(dst+((y+1)*ARENA_W + x)) = HOLE_TILE_STATE;
+                        }
+
+                    }
+                    break;
+
+
+
+                case CPU_YELLOW_CAR_TILE_STATE:
+                    ai(data,x,y);
+                    if ( botdir[3] == DIR_R )
+                    {
+                        if ( *(data+(y*ARENA_W + x + 1)) == FLOOR_TILE_STATE && *(dst+(y*ARENA_W + x + 1)) == FLOOR_TILE_STATE )
+                        {
+                            *(dst+(y*ARENA_W + x)) = YELLOW_WALL_TILE_STATE;
+                            *(dst+(y*ARENA_W + x + 1)) = CPU_YELLOW_CAR_TILE_STATE;
+                        }
+                        else { // destroy
+                            switch ( *(dst+(y*ARENA_W + x + 1)) )
+                            {
+                                case PLAYER_CAR_TILE_STATE:
+                                    gamestate = LOOSER_STATE;
+                                    timeout = 15;
+                                    break;
+
+                                case CPU_GREEN_CAR_TILE_STATE:
+                                case CPU_BLUE_CAR_TILE_STATE:
+                                case CPU_YELLOW_CAR_TILE_STATE:
+                                    activebots--;
+                                    break;
+
+                                default:
+                                    break;
+                            }
+
+                            activebots--;
+                            if ( gamestate != LOOSER_STATE && activebots == 0 )
+                            {
+                                gamestate = WINNER_STATE;
+                                timeout = 15;
+                            }
+                            *(dst+(y*ARENA_W + x)) = YELLOW_WALL_TILE_STATE;
+                            if (*(data+(y*ARENA_W + x + 1)) != BORDER_TILE_STATE ) *(dst+(y*ARENA_W + x + 1)) = HOLE_TILE_STATE;
+                        }
+                    }
+                    else if ( botdir[3] == DIR_L )
+                    {
+                        if ( *(data+(y*ARENA_W + x - 1)) == FLOOR_TILE_STATE && *(dst+(y*ARENA_W + x - 1)) == FLOOR_TILE_STATE )
+                        {
+                            *(dst+(y*ARENA_W + x)) = YELLOW_WALL_TILE_STATE;
+                            *(dst+(y*ARENA_W + x - 1)) = CPU_YELLOW_CAR_TILE_STATE;
+                        }
+                        else { // destroy
+                            switch ( *(dst+(y*ARENA_W + x - 1)) )
+                            {
+                                case PLAYER_CAR_TILE_STATE:
+                                    gamestate = LOOSER_STATE;
+                                    timeout = 15;
+                                    break;
+
+                                case CPU_GREEN_CAR_TILE_STATE:
+                                case CPU_BLUE_CAR_TILE_STATE:
+                                case CPU_YELLOW_CAR_TILE_STATE:
+                                    activebots--;
+                                    break;
+
+                                default:
+                                    break;
+                            }
+
+                            activebots--;
+                            if ( gamestate != LOOSER_STATE && activebots == 0 )
+                            {
+                                gamestate = WINNER_STATE;
+                                timeout = 15;
+                            }
+                            *(dst+(y*ARENA_W + x)) = YELLOW_WALL_TILE_STATE;
+                            if (*(data+(y*ARENA_W + x - 1)) != BORDER_TILE_STATE ) *(dst+(y*ARENA_W + x - 1)) = HOLE_TILE_STATE;
+                        }
+
+                    }
+                    else if ( botdir[3] == DIR_U )
+                    {
+                        if ( *(data+((y-1)*ARENA_W + x)) == FLOOR_TILE_STATE && *(dst+((y-1)*ARENA_W + x)) == FLOOR_TILE_STATE )
+                        {
+                            *(dst+(y*ARENA_W + x)) = YELLOW_WALL_TILE_STATE;
+                            *(dst+((y-1)*ARENA_W + x)) = CPU_YELLOW_CAR_TILE_STATE;
+                        }
+                        else { // destroy
+                            switch ( *(dst+((y-1)*ARENA_W + x)) )
+                            {
+                                case PLAYER_CAR_TILE_STATE:
+                                    gamestate = LOOSER_STATE;
+                                    timeout = 15;
+                                    break;
+
+                                case CPU_GREEN_CAR_TILE_STATE:
+                                case CPU_BLUE_CAR_TILE_STATE:
+                                case CPU_YELLOW_CAR_TILE_STATE:
+                                    activebots--;
+                                    break;
+
+                                default:
+                                    break;
+                            }
+
+                            activebots--;
+                            if ( gamestate != LOOSER_STATE && activebots == 0 )
+                            {
+                                gamestate = WINNER_STATE;
+                                timeout = 15;
+                            }
+                            *(dst+(y*ARENA_W + x)) = YELLOW_WALL_TILE_STATE;
+                            if (*(data+((y-1)*ARENA_W + x)) != BORDER_TILE_STATE ) *(dst+((y-1)*ARENA_W + x)) = HOLE_TILE_STATE;
+                        }
+
+                    }
+                    else if ( botdir[3] == DIR_D )
+                    {
+                        if ( *(data+((y+1)*ARENA_W + x)) == FLOOR_TILE_STATE && *(dst+((y+1)*ARENA_W + x)) == FLOOR_TILE_STATE )
+                        {
+                            *(dst+(y*ARENA_W + x)) = YELLOW_WALL_TILE_STATE;
+                            *(dst+((y+1)*ARENA_W + x)) = CPU_YELLOW_CAR_TILE_STATE;
+                        }
+                        else { // destroy
+                            switch ( *(dst+((y+1)*ARENA_W + x)) )
+                            {
+                                case PLAYER_CAR_TILE_STATE:
+                                    gamestate = LOOSER_STATE;
+                                    timeout = 15;
+                                    break;
+
+                                case CPU_GREEN_CAR_TILE_STATE:
+                                case CPU_BLUE_CAR_TILE_STATE:
+                                case CPU_YELLOW_CAR_TILE_STATE:
+                                    activebots--;
+                                    break;
+
+                                default:
+                                    break;
+                            }
+
+                            activebots--;
+                            if ( gamestate != LOOSER_STATE && activebots == 0 )
+                            {
+                                gamestate = WINNER_STATE;
+                                timeout = 15;
+                            }
+                            *(dst+(y*ARENA_W + x)) = YELLOW_WALL_TILE_STATE;
+                            if (*(data+((y+1)*ARENA_W + x)) != BORDER_TILE_STATE ) *(dst+((y+1)*ARENA_W + x)) = HOLE_TILE_STATE;
+                        }
+
+                    }
+                    break;
+
+
 
             }
         }

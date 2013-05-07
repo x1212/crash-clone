@@ -22,11 +22,14 @@ void initMenu( void )
 
 void handleKeyEvent( SDL_Event *event )
 {
+    //printf("Key pressed event recognized!\n");
     switch ( event->key.keysym.sym )
     {
+        case SDLK_END:
         case SDLK_ESCAPE:
             state = -1; // quit
             break;
+        case SDLK_HOME:
         case SDLK_SPACE:
         case SDLK_RETURN:
             state = 1; // start game
