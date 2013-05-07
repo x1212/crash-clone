@@ -257,6 +257,9 @@ void drawTile( int tileID, int x, int y )
     SDL_BlitSurface( tileset, &src, screen, &dst );
 }
 
+// TODO:
+int getWallTileOffset( int *data, int x, int y );
+
 void drawGrid( int* data, int w, int h )
 {
     int x, y;
@@ -718,7 +721,7 @@ void ai( int *data, int x, int y )
                 }
             }
         }
-        printf( "%d:%d  dist:%d\n", botID, botdir[botID], getDist(data,botdir[botID],x,y) );
+        //printf( "%d:%d  dist:%d\n", botID, botdir[botID], getDist(data,botdir[botID],x,y) );
     }
     else if ( dice > 75 )
     {
@@ -750,6 +753,12 @@ void ai( int *data, int x, int y )
     //else printf( "%d \n", dice ); 
 }
 
+// TODO:
+void destroy( int *data, int *dst, int x, int y, int destroyedTile ); // x and y are the new coordinates of the object beeing destroyed, destroyed Tile tells us what is destroyed (at x|y is only the obstracle)
+void moveCar( int *data, int *dst, int x, int y, int dir, int wall, int car );
+#define TILE( x, y) (*(data+((y)*ARENA_W + (x))))
+#define DEST_TILE( x, y) (*(dst+((y)*ARENA_W + (x))))
+
 void logic( int *data, int *dst, int w, int h )
 {
     int x, y;
@@ -768,82 +777,16 @@ void logic( int *data, int *dst, int w, int h )
     {
         for ( y = ARENA_BORDER; y < ARENA_H; y++ )
         {
-            switch ( *(data+(y*ARENA_W + x)) )
+            int dir, wall, car;
+            switch ( TILE( x, y) )
             {
                 case PLAYER_CAR_TILE_STATE:
-                    if ( botdir[0] == DIR_R )
-                    {
-                        if ( *(data+(y*ARENA_W + x + 1)) == FLOOR_TILE_STATE && *(dst+(y*ARENA_W + x + 1)) == FLOOR_TILE_STATE )
-                        {
-                            *(dst+(y*ARENA_W + x)) = RED_WALL_TILE_STATE;
-                            *(dst+(y*ARENA_W + x + 1)) = PLAYER_CAR_TILE_STATE;
-                        }
-                        else { // destroy
-                            if ( gamestate != WINNER_STATE )
-                            {
-                                gamestate = LOOSER_STATE;
-                                timeout = 15;
-                            }
-                            *(dst+(y*ARENA_W + x)) = RED_WALL_TILE_STATE;
-                            if (*(data+(y*ARENA_W + x + 1)) != BORDER_TILE_STATE ) *(dst+(y*ARENA_W + x + 1)) = HOLE_TILE_STATE;
-                        }
-                    }
-                    else if ( botdir[0] == DIR_L )
-                    {
-                        if ( *(data+(y*ARENA_W + x - 1)) == FLOOR_TILE_STATE && *(dst+(y*ARENA_W + x - 1)) == FLOOR_TILE_STATE )
-                        {
-                            *(dst+(y*ARENA_W + x)) = RED_WALL_TILE_STATE;
-                            *(dst+(y*ARENA_W + x - 1)) = PLAYER_CAR_TILE_STATE;
-                        }
-                        else { // destroy
-                            if ( gamestate != WINNER_STATE )
-                            {
-                                gamestate = LOOSER_STATE;
-                                timeout = 15;
-                            }
-                            *(dst+(y*ARENA_W + x)) = RED_WALL_TILE_STATE;
-                            if (*(data+(y*ARENA_W + x - 1)) != BORDER_TILE_STATE ) *(dst+(y*ARENA_W + x - 1)) = HOLE_TILE_STATE;
-                        }
-
-                    }
-                    else if ( botdir[0] == DIR_U )
-                    {
-                        if ( *(data+((y-1)*ARENA_W + x)) == FLOOR_TILE_STATE && *(dst+((y-1)*ARENA_W + x)) == FLOOR_TILE_STATE )
-                        {
-                            *(dst+(y*ARENA_W + x)) = RED_WALL_TILE_STATE;
-                            *(dst+((y-1)*ARENA_W + x)) = PLAYER_CAR_TILE_STATE;
-                        }
-                        else { // destroy
-                            if ( gamestate != WINNER_STATE )
-                            {
-                                gamestate = LOOSER_STATE;
-                                timeout = 15;
-                            }
-                            *(dst+(y*ARENA_W + x)) = RED_WALL_TILE_STATE;
-                            if (*(data+((y-1)*ARENA_W + x)) != BORDER_TILE_STATE ) *(dst+((y-1)*ARENA_W + x)) = HOLE_TILE_STATE;
-                        }
-
-                    }
-                    else if ( botdir[0] == DIR_D )
-                    {
-                        if ( *(data+((y+1)*ARENA_W + x)) == FLOOR_TILE_STATE && *(dst+((y+1)*ARENA_W + x)) == FLOOR_TILE_STATE )
-                        {
-                            *(dst+(y*ARENA_W + x)) = RED_WALL_TILE_STATE;
-                            *(dst+((y+1)*ARENA_W + x)) = PLAYER_CAR_TILE_STATE;
-                        }
-                        else { // destroy
-                            if ( gamestate != WINNER_STATE )
-                            {
-                                gamestate = LOOSER_STATE;
-                                timeout = 15;
-                            }
-                            *(dst+(y*ARENA_W + x)) = RED_WALL_TILE_STATE;
-                            if (*(data+((y+1)*ARENA_W + x)) != BORDER_TILE_STATE ) *(dst+((y+1)*ARENA_W + x)) = HOLE_TILE_STATE;
-                        }
-
-                    }
                     camX = x - 800/16/2;
                     camY = y - 480/16/2;
+                    dir = botdir[0];
+                    wall = RED_WALL_TILE_STATE;
+                    car = PLAYER_CAR_TILE_STATE;
+                    moveCar( data, dst, x, y, dir, wall, car );
                     break;
 
 
@@ -1297,4 +1240,109 @@ void logic( int *data, int *dst, int w, int h )
             }
         }
     }
+}
+
+
+void destroy( int *data, int *dst, int x, int y, int destroyedTile )
+{
+    switch ( *(dst+(y*ARENA_W + x)) )
+    {
+        case PLAYER_CAR_TILE_STATE:
+            gamestate = LOOSER_STATE;
+            timeout = 15;
+            break;
+
+        case CPU_GREEN_CAR_TILE_STATE:
+        case CPU_BLUE_CAR_TILE_STATE:
+        case CPU_YELLOW_CAR_TILE_STATE:
+            activebots--;
+            break;
+
+        default:
+            break;
+    }
+
+    switch ( destroyedTile )
+    {
+        case PLAYER_CAR_TILE_STATE:
+            gamestate = LOOSER_STATE;
+            timeout = 15;
+            break;
+
+        case CPU_GREEN_CAR_TILE_STATE:
+        case CPU_BLUE_CAR_TILE_STATE:
+        case CPU_YELLOW_CAR_TILE_STATE:
+            activebots--;
+            break;
+
+        default:
+            break;
+    }
+
+    if ( gamestate != LOOSER_STATE && activebots == 0 )
+    {
+        gamestate = WINNER_STATE;
+        timeout = 15;
+    }
+    if (*(data+(y*ARENA_W + x)) != BORDER_TILE_STATE ) *(dst+(y*ARENA_W + x)) = HOLE_TILE_STATE;
+    if (*(data+((y-1)*ARENA_W + x)) != BORDER_TILE_STATE ) *(dst+((y-1)*ARENA_W + x)) = HOLE_TILE_STATE;
+    if (*(data+(y*ARENA_W + x + 1)) != BORDER_TILE_STATE ) *(dst+(y*ARENA_W + x + 1)) = HOLE_TILE_STATE;
+    if (*(data+((y+1)*ARENA_W + x)) != BORDER_TILE_STATE ) *(dst+((y+1)*ARENA_W + x)) = HOLE_TILE_STATE;
+    if (*(data+(y*ARENA_W + x -1)) != BORDER_TILE_STATE ) *(dst+(y*ARENA_W + x - 1)) = HOLE_TILE_STATE;
+}
+
+
+void moveCar( int *data, int *dst, int x, int y, int dir, int wall, int car )
+{
+    if ( dir == DIR_R )
+    {
+        if ( TILE( x + 1, y ) == FLOOR_TILE_STATE && DEST_TILE( x + 1, y ) == FLOOR_TILE_STATE )
+        {
+            DEST_TILE( x, y ) = wall;
+            DEST_TILE( x + 1, y ) = car;
+        }
+        else
+        { // destroy
+            destroy( data, dst, x + 1, y, TILE( x, y ) );
+        }
+    }
+    else if ( dir == DIR_L )
+    {
+        if ( TILE( x - 1, y ) == FLOOR_TILE_STATE && DEST_TILE( x - 1, y ) == FLOOR_TILE_STATE )
+        {
+            DEST_TILE( x, y ) = wall;
+            DEST_TILE( x - 1, y ) = car;
+        }
+        else
+        { // destroy
+            destroy( data, dst, x - 1, y, TILE( x, y ));
+        }
+
+    }
+    else if ( dir == DIR_U )
+    {
+        if ( TILE( x, y - 1 ) == FLOOR_TILE_STATE && DEST_TILE( x, y - 1 ) == FLOOR_TILE_STATE )
+        {
+            DEST_TILE( x, y ) = wall;
+            DEST_TILE( x, y - 1 ) = car;
+        }
+        else
+        { // destroy
+            destroy( data, dst, x, y - 1, TILE( x, y ));
+        }
+
+    }
+    else if ( dir == DIR_D )
+    {
+        if ( TILE( x, y + 1 ) == FLOOR_TILE_STATE && DEST_TILE( x, y + 1 ) == FLOOR_TILE_STATE )
+        {
+            DEST_TILE( x, y ) = wall;
+            DEST_TILE( x, y + 1 ) = car;
+        }
+        else
+        { // destroy
+            destroy( data, dst, x, y + 1, TILE( x, y ));
+        }
+    }
+
 }
