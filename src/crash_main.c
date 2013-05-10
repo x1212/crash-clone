@@ -24,6 +24,7 @@ void initMain( void )
     // SDL initialisation
     SDL_Init( SDL_INIT_VIDEO | SDL_INIT_AUDIO );
     screen = SDL_SetVideoMode( SCREEN_RES, SDL_HWSURFACE | SDL_DOUBLEBUF SCREEN_MODE );
+    SDL_ShowCursor(0); // hide the cursor
 
 }
 

@@ -39,21 +39,28 @@
 
 extern int state;
 extern SDL_Surface *screen;
+extern int speed;
 
 SDL_Surface *tileset, *looser, *winner;
 Uint8 *keystate;
 int camX, camY;
 int botdir[4], botcooldown[4]; // player counts as bot as well ...
 int gamestate;
+int lastTicks, currentTicks;
+int tpt; // ticks per turn
 #define NOT_ENDED_STATE 0
 #define WINNER_STATE 1
 #define LOOSER_STATE 2
 int timeout; // number of turns until state is set to menu
 int activebots; // number of bots still in the game
 
+
+
 void initGame( int* data1, int* data2 )
 {
     int x, y;
+    if ( speed == 0 ) tpt = 100; else if( speed == 1 ) tpt = 75; else if( speed == 2 ) tpt = 50; else if ( speed == 3 ) tpt = 25; else tpt = 100; 
+    lastTicks=0;
     camX = 0; camY = 0;
     timeout = -1;
     gamestate = NOT_ENDED_STATE;
@@ -163,7 +170,8 @@ void game( void )
         firstrun = true; // we want a fresh new game next time
     }
 
-    SDL_Delay(100);
+    currentTicks = SDL_GetTicks();
+    if (currentTicks-lastTicks < tpt) SDL_Delay(tpt-(currentTicks-lastTicks));
     
     // gamestate stuff
     if ( timeout > 0 )
@@ -206,6 +214,7 @@ void game( void )
 
 
     }
+    lastTicks = SDL_GetTicks();
 }
 
 
@@ -670,7 +679,7 @@ void ai( int *data, int x, int y )
     dice = rand()%100;
     if ( currentDist < 5 && dice > 50 )
     {
-        //if (botID==2) printf( "%d:%d->%d\n", botID, botdir[botID], dice%4 );
+        
         if (dice%4*2 != (botdir[botID]+4)%8) botdir[botID] = dice%4*2;
         if ( getDist( data, botdir[botID], x, y) < 5 ) // checks current dir for beeing 'free'
         {
@@ -688,7 +697,7 @@ void ai( int *data, int x, int y )
     }
     else if ( currentDist < 3 && dice > 10 )
     {
-        //if (botID==2) printf( "%d:%d->%d\n", botID, botdir[botID], dice%4 );
+        
         if (dice%4*2 != (botdir[botID]+4)%8) botdir[botID] = dice%4*2;
         if ( getDist( data, botdir[botID], x, y) < 3 ) // checks current dir for beeing 'free'
         {
@@ -706,7 +715,7 @@ void ai( int *data, int x, int y )
     }
     else if ( currentDist < 2 && dice > 0 )
     {
-        printf( "%d:%d->%d\n", botID, botdir[botID], dice%4 );
+        
         if (dice%4*2 != (botdir[botID]+4)%8) botdir[botID] = dice%4*2;
         if ( getDist( data, botdir[botID], x, y) < 2 ) // checks current dir for beeing 'free'
         {
@@ -721,7 +730,7 @@ void ai( int *data, int x, int y )
                 }
             }
         }
-        //printf( "%d:%d  dist:%d\n", botID, botdir[botID], getDist(data,botdir[botID],x,y) );
+        
     }
     else if ( dice > 75 )
     {
@@ -750,7 +759,7 @@ void ai( int *data, int x, int y )
 
     }
     botdir[botID] = botdir[botID]%8;
-    //else printf( "%d \n", dice ); 
+    
 }
 
 // TODO:
@@ -832,7 +841,7 @@ void destroy( int *data, int *dst, int x, int y, int destroyedTile )
     switch ( *(dst+(y*ARENA_W + x)) )
     {
         case PLAYER_CAR_TILE_STATE:
-            gamestate = LOOSER_STATE;
+            if ( gamestate != WINNER_STATE ) gamestate = LOOSER_STATE;
             timeout = 15;
             break;
 
