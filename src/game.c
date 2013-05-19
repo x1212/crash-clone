@@ -25,6 +25,10 @@
 #define GREEN_WALL_TILE_STATE 9
 #define YELLOW_WALL_TILE_STATE 10
 #define HOLE_TILE_STATE 11
+#define ROCKET_U_TILE_STATE 12
+#define ROCKET_R_TILE_STATE 14
+#define ROCKET_D_TILE_STATE 16
+#define ROCKET_L_TILE_STATE 18
 
 
 // movement directions
@@ -46,6 +50,7 @@ SDL_Surface *tileset, *tileset2, *tileset3, *looser, *winner;
 Uint8 *keystate;
 int camX, camY;
 int botdir[4], botcooldown[4]; // player counts as bot as well ...
+bool botTurbo[4]; // tells if tubo is activated for a bot / player
 int gamestate;
 int lastTicks, currentTicks;
 int tpt; // ticks per turn
@@ -54,6 +59,7 @@ int tpt; // ticks per turn
 #define LOOSER_STATE 2
 int timeout; // number of turns until state is set to menu
 int activebots; // number of bots still in the game
+long cycles; // how many turns did this game last already?
 
 
 
@@ -67,6 +73,7 @@ void initGame( int* data1, int* data2 )
     gamestate = NOT_ENDED_STATE;
     activebots = 3;
     srand(time(NULL) + SDL_GetTicks());
+    cycles = 0;
     
     printf("\nInit new Game.\n");
     if ( tileset == NULL)
@@ -228,6 +235,7 @@ void game( void )
 
     }
     lastTicks = SDL_GetTicks();
+    cycles++;
 }
 
 
@@ -262,6 +270,12 @@ void handleKeyStates( void )
     {
         //*if (SDL_GetTicks()%50 == 0)*/ camY++;
         if ( botdir[0] != DIR_U ) botdir[0] = DIR_D;
+    }
+    if ( keystate[SDLK_SPACE] )
+    {
+        botTurbo[0] = true;
+    } else {
+        botTurbo[0] = false;
     }
 
 
@@ -628,6 +642,23 @@ void drawGrid( int* data, int w, int h )
                     case HOLE_TILE_STATE:
                         tile2draw = 28;
                         break;
+
+                    case ROCKET_U_TILE_STATE:
+                        tile2draw = 18;
+                        break;
+
+                    case ROCKET_R_TILE_STATE:
+                        tile2draw = 19;
+                        break;
+
+                    case ROCKET_D_TILE_STATE:
+                        tile2draw = 20;
+                        break;
+
+                    case ROCKET_L_TILE_STATE:
+                        tile2draw = 17;
+                        break;
+
                     default:
                         tile2draw = 93;
                         break;
@@ -792,6 +823,7 @@ void ai( int *data, int x, int y )
 // TODO:
 void destroy( int *data, int *dst, int x, int y, int destroyedTile ); // x and y are the new coordinates of the object beeing destroyed, destroyed Tile tells us what is destroyed (at x|y is only the obstracle)
 void moveCar( int *data, int *dst, int x, int y, int dir, int wall, int car );
+void moveFast( int *data, int *dst, int x, int y, int dir, int wall, int car ); // move 2 Tiles at once if there is nothing in the way
 #define TILE( x, y) (*(data+((y)*ARENA_W + (x))))
 #define DEST_TILE( x, y) (*(dst+((y)*ARENA_W + (x))))
 
@@ -817,12 +849,11 @@ void logic( int *data, int *dst, int w, int h )
             switch ( TILE( x, y) )
             {
                 case PLAYER_CAR_TILE_STATE:
-                    camX = x - 800/16/2;
-                    camY = y - 480/16/2;
                     dir = botdir[0];
                     wall = RED_WALL_TILE_STATE;
                     car = PLAYER_CAR_TILE_STATE;
-                    moveCar( data, dst, x, y, dir, wall, car );
+                    if ( botTurbo[0] == false ) moveCar( data, dst, x, y, dir, wall, car ); // TODO: add this for bots as well and suport this at higher ai-levels
+                    else moveFast( data, dst, x, y, dir, wall, car );
                     break;
 
 
@@ -914,12 +945,19 @@ void destroy( int *data, int *dst, int x, int y, int destroyedTile )
 
 void moveCar( int *data, int *dst, int x, int y, int dir, int wall, int car )
 {
+    if ( cycles%2 == 1 ) 
+    {
+        DEST_TILE( x, y ) = car;
+        return;
+    }
     if ( dir == DIR_R )
     {
         if ( TILE( x + 1, y ) == FLOOR_TILE_STATE && DEST_TILE( x + 1, y ) == FLOOR_TILE_STATE )
         {
             DEST_TILE( x, y ) = wall;
             DEST_TILE( x + 1, y ) = car;
+            if ( car == PLAYER_CAR_TILE_STATE ) camX = x + 1 - 800/16/2;
+            if ( car == PLAYER_CAR_TILE_STATE ) camY = y - 480/16/2;
         }
         else
         { // destroy
@@ -932,6 +970,8 @@ void moveCar( int *data, int *dst, int x, int y, int dir, int wall, int car )
         {
             DEST_TILE( x, y ) = wall;
             DEST_TILE( x - 1, y ) = car;
+            if ( car == PLAYER_CAR_TILE_STATE ) camX = x - 1 - 800/16/2;
+            if ( car == PLAYER_CAR_TILE_STATE ) camY = y - 480/16/2;
         }
         else
         { // destroy
@@ -945,6 +985,8 @@ void moveCar( int *data, int *dst, int x, int y, int dir, int wall, int car )
         {
             DEST_TILE( x, y ) = wall;
             DEST_TILE( x, y - 1 ) = car;
+            if ( car == PLAYER_CAR_TILE_STATE ) camX = x - 800/16/2;
+            if ( car == PLAYER_CAR_TILE_STATE ) camY = y - 1 - 480/16/2;
         }
         else
         { // destroy
@@ -958,6 +1000,71 @@ void moveCar( int *data, int *dst, int x, int y, int dir, int wall, int car )
         {
             DEST_TILE( x, y ) = wall;
             DEST_TILE( x, y + 1 ) = car;
+            if ( car == PLAYER_CAR_TILE_STATE ) camX = x - 800/16/2;
+            if ( car == PLAYER_CAR_TILE_STATE ) camY = y + 1 - 480/16/2;
+        }
+        else
+        { // destroy
+            destroy( data, dst, x, y + 1, TILE( x, y ));
+        }
+    }
+
+}
+
+void moveFast( int *data, int *dst, int x, int y, int dir, int wall, int car )
+{
+    if ( dir == DIR_R )
+    {
+        if ( TILE( x + 1, y ) == FLOOR_TILE_STATE && DEST_TILE( x + 1, y ) == FLOOR_TILE_STATE )
+        {
+            DEST_TILE( x, y ) = wall;
+            DEST_TILE( x + 1, y ) = car;
+            if ( car == PLAYER_CAR_TILE_STATE ) camX = x + 1 - 800/16/2;
+            if ( car == PLAYER_CAR_TILE_STATE ) camY = y - 480/16/2;
+        }
+        else
+        { // destroy
+            destroy( data, dst, x + 1, y, TILE( x, y ) );
+        }
+    }
+    else if ( dir == DIR_L )
+    {
+        if ( TILE( x - 1, y ) == FLOOR_TILE_STATE && DEST_TILE( x - 1, y ) == FLOOR_TILE_STATE )
+        {
+            DEST_TILE( x, y ) = wall;
+            DEST_TILE( x - 1, y ) = car;
+            if ( car == PLAYER_CAR_TILE_STATE ) camX = x - 1 - 800/16/2;
+            if ( car == PLAYER_CAR_TILE_STATE ) camY = y - 480/16/2;
+        }
+        else
+        { // destroy
+            destroy( data, dst, x - 1, y, TILE( x, y ));
+        }
+
+    }
+    else if ( dir == DIR_U )
+    {
+        if ( TILE( x, y - 1 ) == FLOOR_TILE_STATE && DEST_TILE( x, y - 1 ) == FLOOR_TILE_STATE )
+        {
+            DEST_TILE( x, y ) = wall;
+            DEST_TILE( x, y - 1 ) = car;
+            if ( car == PLAYER_CAR_TILE_STATE ) camX = x - 800/16/2;
+            if ( car == PLAYER_CAR_TILE_STATE ) camY = y - 1 - 480/16/2;
+        }
+        else
+        { // destroy
+            destroy( data, dst, x, y - 1, TILE( x, y ));
+        }
+
+    }
+    else if ( dir == DIR_D )
+    {
+        if ( TILE( x, y + 1 ) == FLOOR_TILE_STATE && DEST_TILE( x, y + 1 ) == FLOOR_TILE_STATE )
+        {
+            DEST_TILE( x, y ) = wall;
+            DEST_TILE( x, y + 1 ) = car;
+            if ( car == PLAYER_CAR_TILE_STATE ) camX = x - 800/16/2;
+            if ( car == PLAYER_CAR_TILE_STATE ) camY = y + 1 - 480/16/2;
         }
         else
         { // destroy
