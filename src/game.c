@@ -9,8 +9,8 @@
 #define false 0
 
 
-#define ARENA_H 180
-#define ARENA_W 180
+#define ARENA_H (60*(size+1)*(size+1)+120)
+#define ARENA_W (60*(size+1)*(size+1)+120)
 #define ARENA_BORDER 60
 
 #define BORDER_TILE_STATE 0
@@ -40,8 +40,9 @@
 extern int state;
 extern SDL_Surface *screen;
 extern int speed;
+extern int size;
 
-SDL_Surface *tileset, *looser, *winner;
+SDL_Surface *tileset, *tileset2, *tileset3, *looser, *winner;
 Uint8 *keystate;
 int camX, camY;
 int botdir[4], botcooldown[4]; // player counts as bot as well ...
@@ -71,6 +72,14 @@ void initGame( int* data1, int* data2 )
     if ( tileset == NULL)
     {
         tileset = SDL_LoadBMP("../data/tiles.bmp");
+    }
+    if ( tileset2 == NULL)
+    {
+        tileset2 = SDL_LoadBMP("../data/tiles2.bmp");
+    }
+    if ( tileset3 == NULL)
+    {
+        tileset3 = SDL_LoadBMP("../data/tiles3.bmp");
     }
     if ( looser == NULL)
     {
@@ -128,18 +137,20 @@ void initGame( int* data1, int* data2 )
 
 
 void handleKeyStates( void );
-void drawTile( int tileID, int x, int y );
+void drawTile( int tileID, int x, int y, SDL_Surface *tilesetVariation );
 void drawGrid( int* data, int w, int h ); // data is pointer to array with tileIDs, w and h define the size of that array
 void logic( int* data, int* dst, int w, int h ); // dst is pointer to the array that shoud hold the next state of all tiles
 
 void game( void )
 {
     static bool firstrun = true;
-    static int data1[ARENA_W][ARENA_H], data2[ARENA_W][ARENA_H];
+    static int *data1, *data2;
     static int *currentState, *nextState, *tmp;
 
     if ( firstrun )
     {
+        data1 = (int*)malloc(sizeof(int)*ARENA_W*ARENA_H);
+        data2 = (int*)malloc(sizeof(int)*ARENA_W*ARENA_H);
         currentState = data1;
         nextState = data2;
         initGame( data1, data2);
@@ -184,6 +195,8 @@ void game( void )
         while ( SDL_PollEvent( &event ) )
         { /* do nothing, we only want all events to be thrown away before returning to menu */}
         firstrun = true;
+	free( data1 );
+        free( data2 );
     }
 
     if ( gamestate == WINNER_STATE )
@@ -254,7 +267,7 @@ void handleKeyStates( void )
 
 }
 
-void drawTile( int tileID, int x, int y )
+void drawTile( int tileID, int x, int y, SDL_Surface *tilesetVariation )
 {
     SDL_Rect src, dst;
     src.w = 16; src.h = 16;
@@ -263,7 +276,7 @@ void drawTile( int tileID, int x, int y )
     src.x = (tileID % 16) * 16; src.y = (tileID / 16) * 16;
     dst.x = (x - camX)*16; dst.y = (y - camY)*16;
     
-    SDL_BlitSurface( tileset, &src, screen, &dst );
+    SDL_BlitSurface( tilesetVariation, &src, screen, &dst );
 }
 
 // TODO:
@@ -280,6 +293,23 @@ void drawGrid( int* data, int w, int h )
             if (y < ARENA_H && y >= 0  &&  x < ARENA_W && x >= 0 )
             {
                 int tile2draw = 0;
+                SDL_Surface *usedVariation;
+                srand(x*y+x+3*y);
+                switch ( rand()%5 )
+                {
+                    case 0:
+                    case 1:
+                    case 2:
+                        usedVariation = tileset;
+                        break;
+                    case 3:
+                        usedVariation = tileset2;
+                        break;
+                    case 4:
+                        usedVariation = tileset3;
+                        break;
+                }
+                
 
                 switch (*(data+(y*ARENA_W + x))) {
                     case BORDER_TILE_STATE:
@@ -603,7 +633,7 @@ void drawGrid( int* data, int w, int h )
                         break;
                 }
 
-                drawTile( tile2draw, x, y );
+                drawTile( tile2draw, x, y, usedVariation );
             }
         }
     }
@@ -611,7 +641,7 @@ void drawGrid( int* data, int w, int h )
 
 int getDist( int *data, int dir, int x, int y)
 {
-    int i, currentDist = 0;
+    int i, currentDist = 100;
     for ( i = 1; i < 100; i++ )
     {
         switch (dir)
@@ -679,7 +709,6 @@ void ai( int *data, int x, int y )
     dice = rand()%100;
     if ( currentDist < 5 && dice > 50 )
     {
-        
         if (dice%4*2 != (botdir[botID]+4)%8) botdir[botID] = dice%4*2;
         if ( getDist( data, botdir[botID], x, y) < 5 ) // checks current dir for beeing 'free'
         {
@@ -697,7 +726,6 @@ void ai( int *data, int x, int y )
     }
     else if ( currentDist < 3 && dice > 10 )
     {
-        
         if (dice%4*2 != (botdir[botID]+4)%8) botdir[botID] = dice%4*2;
         if ( getDist( data, botdir[botID], x, y) < 3 ) // checks current dir for beeing 'free'
         {
@@ -715,7 +743,6 @@ void ai( int *data, int x, int y )
     }
     else if ( currentDist < 2 && dice > 0 )
     {
-        
         if (dice%4*2 != (botdir[botID]+4)%8) botdir[botID] = dice%4*2;
         if ( getDist( data, botdir[botID], x, y) < 2 ) // checks current dir for beeing 'free'
         {
@@ -732,7 +759,7 @@ void ai( int *data, int x, int y )
         }
         
     }
-    else if ( dice > 75 )
+    else if ( dice > 95 )
     {
         int distu, distd, distr, distl;
         distu = getDist(data, DIR_U, x, y);
@@ -802,7 +829,7 @@ void logic( int *data, int *dst, int w, int h )
 
 
                 case CPU_GREEN_CAR_TILE_STATE:
-                    ai(data,x,y);
+                    ai(dst,x,y);
                     dir = botdir[1];
                     wall = GREEN_WALL_TILE_STATE;
                     car = CPU_GREEN_CAR_TILE_STATE;
@@ -811,7 +838,7 @@ void logic( int *data, int *dst, int w, int h )
 
 
                 case CPU_BLUE_CAR_TILE_STATE:
-                    ai(data,x,y);
+                    ai(dst,x,y);
                     dir = botdir[2];
                     wall = BLUE_WALL_TILE_STATE;
                     car = CPU_BLUE_CAR_TILE_STATE;
@@ -821,7 +848,7 @@ void logic( int *data, int *dst, int w, int h )
 
 
                 case CPU_YELLOW_CAR_TILE_STATE:
-                    ai(data,x,y);
+                    ai(dst,x,y);
                     dir = botdir[3];
                     wall = YELLOW_WALL_TILE_STATE;
                     car = CPU_YELLOW_CAR_TILE_STATE;

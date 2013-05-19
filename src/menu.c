@@ -12,6 +12,7 @@
 #define START_GAME_SELECT 0
 #define DIFFICULTY_SELECT 1
 #define SPEED_SELECT 2
+#define SIZE_SELECT 3
 #define SLOW_SPEED 0
 #define AVERAGE_SPEED 1
 #define FAST_SPEED 2
@@ -19,15 +20,18 @@
 #define EASY_DIFFICULTY 0
 #define STANDARD_DIFFICULTY 1
 #define HARD_DIFFICULTY 2
+#define SMALL_SIZE 0
+#define MEDIUM_SIZE 1
+#define BIG_SIZE 2
 
 
 extern int state;
 extern SDL_Surface *screen;
 
-int speed, difficulty; // these will be used from within the game
+int speed, difficulty, size; // these will be used from within the game
 int selection;
 
-SDL_Surface *menuBG, *startButton, *easyMode, *standardMode, *hardMode, *fast, *average, *slow, *insane;
+SDL_Surface *menuBG, *startButton, *easyMode, *standardMode, *hardMode, *fast, *average, *slow, *insane, *small, *medium, *big;
 
 void activateAlpha( SDL_Surface *surf )
 {
@@ -47,6 +51,9 @@ void initMenu( void )
     slow = SDL_LoadBMP("../data/slow.bmp");
     average = SDL_LoadBMP("../data/average.bmp");
     insane = SDL_LoadBMP("../data/insane.bmp");
+    small = SDL_LoadBMP("../data/small.bmp");
+    medium = SDL_LoadBMP("../data/medium.bmp");
+    big = SDL_LoadBMP("../data/big.bmp");
 
     activateAlpha( startButton );
     activateAlpha( easyMode );
@@ -56,10 +63,13 @@ void initMenu( void )
     activateAlpha( slow );
     activateAlpha( average );
     activateAlpha( insane );
+    activateAlpha( small );
+    activateAlpha( medium );
+    activateAlpha( big );
 
     selection = START_GAME_SELECT;
     speed = SLOW_SPEED;
-    difficulty = STANDARD_DIFFICULTY;
+    difficulty = EASY_DIFFICULTY;
 }
 
 void handleKeyEvent( SDL_Event *event )
@@ -78,11 +88,11 @@ void handleKeyEvent( SDL_Event *event )
             if ( selection == START_GAME_SELECT ) state = 1; // start game
             break;
         case SDLK_DOWN:
-            selection = (selection + 1) % 3;
+            selection = (selection + 1) % 4;
             break;
         case SDLK_UP:
             selection--;
-            if ( selection < 0 ) selection = 2;
+            if ( selection < 0 ) selection = 3;
             break;
         case SDLK_LEFT:
             selectionChange = -1;
@@ -109,6 +119,11 @@ void handleKeyEvent( SDL_Event *event )
                 if ( speed < 0 ) speed = 0;
                 if ( speed > 3 ) speed = 3;
                 break;
+            case SIZE_SELECT:
+                size += selectionChange;
+                if ( size < 0 ) size = 0;
+                if ( size > 2 ) size = 2;
+                break;
         }
 
     }
@@ -119,7 +134,7 @@ void menu( void )
     static bool firstrun = true;
     SDL_Rect SrcR, DstR;
     SDL_Event event;
-    SDL_Surface *modeSelector, *speedSelector;
+    SDL_Surface *modeSelector, *speedSelector, *sizeSelector;
 
     if ( firstrun )
     {
@@ -169,19 +184,38 @@ void menu( void )
             break;
     }
 
+    switch ( size )
+    {
+        case SMALL_SIZE:
+            sizeSelector = small;
+            break;
+        case MEDIUM_SIZE:
+            sizeSelector = medium;
+            break;
+        case BIG_SIZE:
+            sizeSelector = big;
+            break;
+        default:
+            break;
+    }
+
     // draw menu
-    if ( selection == START_GAME_SELECT ) DstR.x = 2*sin(SDL_GetTicks());
+    if ( selection == START_GAME_SELECT ) DstR.x = 3*sin(SDL_GetTicks());
     else DstR.x = 0;
     DstR.y = 250;
     SDL_BlitSurface( startButton, &SrcR, screen, &DstR );
-    if ( selection == DIFFICULTY_SELECT ) DstR.x = 2*sin(SDL_GetTicks());
+    if ( selection == DIFFICULTY_SELECT ) DstR.x = 3*sin(SDL_GetTicks());
     else DstR.x = 0;
     DstR.y = 300;
     SDL_BlitSurface( modeSelector, &SrcR, screen, &DstR );
-    if ( selection == SPEED_SELECT ) DstR.x = 2*sin(SDL_GetTicks());
+    if ( selection == SPEED_SELECT ) DstR.x = 3*sin(SDL_GetTicks());
     else DstR.x = 0;
     DstR.y = 350;
     SDL_BlitSurface( speedSelector, &SrcR, screen, &DstR );
+    if ( selection == SIZE_SELECT ) DstR.x = 3*sin(SDL_GetTicks());
+    else DstR.x = 0;
+    DstR.y = 400;
+    SDL_BlitSurface( sizeSelector, &SrcR, screen, &DstR );
 
     while(SDL_PollEvent(&event)) {  /* Loop until there are no events left on the queue */
         switch(event.type) { /* Process the appropriate event type */

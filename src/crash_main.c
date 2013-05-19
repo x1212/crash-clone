@@ -7,7 +7,7 @@
 
 
 #define SCREEN_RES 800, 480, 32
-#define SCREEN_MODE /*|SDL_FULLSCREEN*/
+#define SCREEN_MODE |SDL_FULLSCREEN
 
 
 void game( void );
