@@ -29,6 +29,7 @@
 #define ROCKET_R_TILE_STATE 14
 #define ROCKET_D_TILE_STATE 16
 #define ROCKET_L_TILE_STATE 18
+#define EXPLOSION_TILE_STATE 50
 
 
 // movement directions
@@ -50,7 +51,7 @@ SDL_Surface *tileset, *tileset2, *tileset3, *looser, *winner;
 Uint8 *keystate;
 int camX, camY;
 int botdir[4], botcooldown[4]; // player counts as bot as well ...
-bool botTurbo[4]; // tells if tubo is activated for a bot / player
+bool botTurbo[4], botRocket[4]; // tells if tubo is activated for a bot / player
 int gamestate;
 int lastTicks, currentTicks;
 int tpt; // ticks per turn
@@ -60,13 +61,14 @@ int tpt; // ticks per turn
 int timeout; // number of turns until state is set to menu
 int activebots; // number of bots still in the game
 long cycles; // how many turns did this game last already?
+int energy;
 
 
 
 void initGame( int* data1, int* data2 )
 {
     int x, y;
-    if ( speed == 0 ) tpt = 100; else if( speed == 1 ) tpt = 75; else if( speed == 2 ) tpt = 50; else if ( speed == 3 ) tpt = 25; else tpt = 100; 
+    if ( speed == 0 ) tpt = 50; else if( speed == 1 ) tpt = 38; else if( speed == 2 ) tpt = 25; else if ( speed == 3 ) tpt = 17; else tpt = 100; 
     lastTicks=0;
     camX = 0; camY = 0;
     timeout = -1;
@@ -74,6 +76,7 @@ void initGame( int* data1, int* data2 )
     activebots = 3;
     srand(time(NULL) + SDL_GetTicks());
     cycles = 0;
+    energy = 0;
     
     printf("\nInit new Game.\n");
     if ( tileset == NULL)
@@ -276,6 +279,13 @@ void handleKeyStates( void )
         botTurbo[0] = true;
     } else {
         botTurbo[0] = false;
+        if ( energy < 25 ) energy ++;
+    }
+    if ( keystate[SDLK_a] && energy == 25 ) {
+        botRocket[0] = true;
+        energy = 0;
+    } else {
+        botRocket[0] = false;
     }
 
 
@@ -660,7 +670,17 @@ void drawGrid( int* data, int w, int h )
                         break;
 
                     default:
-                        tile2draw = 93;
+                        if ( *(data+(y*ARENA_W + x)) >= EXPLOSION_TILE_STATE )
+                        {
+                            if ( (*(data+(y*ARENA_W + x))) < EXPLOSION_TILE_STATE + 2*6 ) (*(data+(y*ARENA_W + x)))++;
+                            if ( (*(data+(y*ARENA_W + x))) < EXPLOSION_TILE_STATE + 2  ) tile2draw = 21;
+                            else if ( (*(data+(y*ARENA_W + x))) < EXPLOSION_TILE_STATE + 2*2  ) tile2draw = 22;
+                            else if ( (*(data+(y*ARENA_W + x))) < EXPLOSION_TILE_STATE + 2*3  ) tile2draw = 23;
+                            else if ( (*(data+(y*ARENA_W + x))) < EXPLOSION_TILE_STATE + 2*4  ) tile2draw = 24;
+                            else if ( (*(data+(y*ARENA_W + x))) < EXPLOSION_TILE_STATE + 2*5  ) tile2draw = 25;
+                            else if ( (*(data+(y*ARENA_W + x))) <= EXPLOSION_TILE_STATE + 2*6  ) tile2draw = 26;
+                        }
+                        else tile2draw = 93;
                         break;
                 }
 
@@ -824,8 +844,10 @@ void ai( int *data, int x, int y )
 void destroy( int *data, int *dst, int x, int y, int destroyedTile ); // x and y are the new coordinates of the object beeing destroyed, destroyed Tile tells us what is destroyed (at x|y is only the obstracle)
 void moveCar( int *data, int *dst, int x, int y, int dir, int wall, int car );
 void moveFast( int *data, int *dst, int x, int y, int dir, int wall, int car ); // move 2 Tiles at once if there is nothing in the way
+void fireRocket( int *data, int *dst, int x, int y, int dir, int wall, int car );
 #define TILE( x, y) (*(data+((y)*ARENA_W + (x))))
 #define DEST_TILE( x, y) (*(dst+((y)*ARENA_W + (x))))
+#define IS_TILE_NON_SOLID( x, y )  ( TILE( x, y ) == FLOOR_TILE_STATE && DEST_TILE( x, y ) == FLOOR_TILE_STATE || TILE( x, y ) == EXPLOSION_TILE_STATE + 6*2 && DEST_TILE( x, y ) == EXPLOSION_TILE_STATE + 6*2 )
 
 void logic( int *data, int *dst, int w, int h )
 {
@@ -854,6 +876,7 @@ void logic( int *data, int *dst, int w, int h )
                     car = PLAYER_CAR_TILE_STATE;
                     if ( botTurbo[0] == false ) moveCar( data, dst, x, y, dir, wall, car ); // TODO: add this for bots as well and suport this at higher ai-levels
                     else moveFast( data, dst, x, y, dir, wall, car );
+                    if ( botRocket[0] == true ) fireRocket( data, dst, x, y, dir, wall, car );
                     break;
 
 
@@ -887,6 +910,15 @@ void logic( int *data, int *dst, int w, int h )
                     break;
 
 
+                case ROCKET_U_TILE_STATE:
+                case ROCKET_R_TILE_STATE:
+                case ROCKET_D_TILE_STATE:
+                case ROCKET_L_TILE_STATE:
+                    dir = TILE( x, y ) - ROCKET_U_TILE_STATE;
+                    wall = FLOOR_TILE_STATE;
+                    car = TILE( x, y );
+                    moveFast( data, dst, x, y, dir, wall, car );
+                    break;
 
             }
         }
@@ -896,6 +928,7 @@ void logic( int *data, int *dst, int w, int h )
 
 void destroy( int *data, int *dst, int x, int y, int destroyedTile )
 {
+    bool rocket = false;
     switch ( *(dst+(y*ARENA_W + x)) )
     {
         case PLAYER_CAR_TILE_STATE:
@@ -926,6 +959,12 @@ void destroy( int *data, int *dst, int x, int y, int destroyedTile )
             activebots--;
             break;
 
+        case ROCKET_U_TILE_STATE:
+        case ROCKET_R_TILE_STATE:
+        case ROCKET_D_TILE_STATE:
+        case ROCKET_L_TILE_STATE:
+            rocket = true;
+
         default:
             break;
     }
@@ -935,12 +974,28 @@ void destroy( int *data, int *dst, int x, int y, int destroyedTile )
         gamestate = WINNER_STATE;
         timeout = 15;
     }
-    if (*(data+(y*ARENA_W + x)) != BORDER_TILE_STATE ) *(dst+(y*ARENA_W + x)) = HOLE_TILE_STATE;
-    if (*(data+((y-1)*ARENA_W + x)) != BORDER_TILE_STATE ) *(dst+((y-1)*ARENA_W + x)) = HOLE_TILE_STATE;
-    if (*(data+(y*ARENA_W + x + 1)) != BORDER_TILE_STATE ) *(dst+(y*ARENA_W + x + 1)) = HOLE_TILE_STATE;
-    if (*(data+((y+1)*ARENA_W + x)) != BORDER_TILE_STATE ) *(dst+((y+1)*ARENA_W + x)) = HOLE_TILE_STATE;
-    if (*(data+(y*ARENA_W + x -1)) != BORDER_TILE_STATE ) *(dst+(y*ARENA_W + x - 1)) = HOLE_TILE_STATE;
+    if ( rocket == true )
+    {
+        if (*(data+(y*ARENA_W + x)) != BORDER_TILE_STATE ) *(dst+(y*ARENA_W + x)) = EXPLOSION_TILE_STATE;
+        if (*(data+((y-1)*ARENA_W + x)) != BORDER_TILE_STATE ) *(dst+((y-1)*ARENA_W + x)) = EXPLOSION_TILE_STATE;
+        if (*(data+(y*ARENA_W + x + 1)) != BORDER_TILE_STATE ) *(dst+(y*ARENA_W + x + 1)) = EXPLOSION_TILE_STATE;
+        if (*(data+((y+1)*ARENA_W + x)) != BORDER_TILE_STATE ) *(dst+((y+1)*ARENA_W + x)) = EXPLOSION_TILE_STATE;
+        if (*(data+(y*ARENA_W + x - 1)) != BORDER_TILE_STATE ) *(dst+(y*ARENA_W + x - 1)) = EXPLOSION_TILE_STATE;
+    }
+    if ( rocket == false )
+    {
+        if (*(data+(y*ARENA_W + x)) != BORDER_TILE_STATE ) *(dst+(y*ARENA_W + x)) = HOLE_TILE_STATE;
+        if (*(data+((y-1)*ARENA_W + x)) != BORDER_TILE_STATE ) *(dst+((y-1)*ARENA_W + x)) = HOLE_TILE_STATE;
+        if (*(data+(y*ARENA_W + x + 1)) != BORDER_TILE_STATE ) *(dst+(y*ARENA_W + x + 1)) = HOLE_TILE_STATE;
+        if (*(data+((y+1)*ARENA_W + x)) != BORDER_TILE_STATE ) *(dst+((y+1)*ARENA_W + x)) = HOLE_TILE_STATE;
+        if (*(data+(y*ARENA_W + x - 1)) != BORDER_TILE_STATE ) *(dst+(y*ARENA_W + x - 1)) = HOLE_TILE_STATE;
+        if (*(data+((y-1)*ARENA_W + x - 1)) != BORDER_TILE_STATE ) *(dst+((y-1)*ARENA_W + x - 1)) = EXPLOSION_TILE_STATE;
+        if (*(data+((y+1)*ARENA_W + x - 1)) != BORDER_TILE_STATE ) *(dst+((y+1)*ARENA_W + x - 1)) = EXPLOSION_TILE_STATE;
+        if (*(data+((y-1)*ARENA_W + x + 1)) != BORDER_TILE_STATE ) *(dst+((y-1)*ARENA_W + x + 1)) = EXPLOSION_TILE_STATE;
+        if (*(data+((y+1)*ARENA_W + x + 1)) != BORDER_TILE_STATE ) *(dst+((y+1)*ARENA_W + x + 1)) = EXPLOSION_TILE_STATE;
+    }
 }
+
 
 
 void moveCar( int *data, int *dst, int x, int y, int dir, int wall, int car )
@@ -952,7 +1007,7 @@ void moveCar( int *data, int *dst, int x, int y, int dir, int wall, int car )
     }
     if ( dir == DIR_R )
     {
-        if ( TILE( x + 1, y ) == FLOOR_TILE_STATE && DEST_TILE( x + 1, y ) == FLOOR_TILE_STATE )
+        if ( IS_TILE_NON_SOLID( x + 1, y ) )
         {
             DEST_TILE( x, y ) = wall;
             DEST_TILE( x + 1, y ) = car;
@@ -966,7 +1021,7 @@ void moveCar( int *data, int *dst, int x, int y, int dir, int wall, int car )
     }
     else if ( dir == DIR_L )
     {
-        if ( TILE( x - 1, y ) == FLOOR_TILE_STATE && DEST_TILE( x - 1, y ) == FLOOR_TILE_STATE )
+        if ( IS_TILE_NON_SOLID( x - 1, y ) )
         {
             DEST_TILE( x, y ) = wall;
             DEST_TILE( x - 1, y ) = car;
@@ -981,7 +1036,7 @@ void moveCar( int *data, int *dst, int x, int y, int dir, int wall, int car )
     }
     else if ( dir == DIR_U )
     {
-        if ( TILE( x, y - 1 ) == FLOOR_TILE_STATE && DEST_TILE( x, y - 1 ) == FLOOR_TILE_STATE )
+        if ( IS_TILE_NON_SOLID( x, y - 1 ) )
         {
             DEST_TILE( x, y ) = wall;
             DEST_TILE( x, y - 1 ) = car;
@@ -996,7 +1051,7 @@ void moveCar( int *data, int *dst, int x, int y, int dir, int wall, int car )
     }
     else if ( dir == DIR_D )
     {
-        if ( TILE( x, y + 1 ) == FLOOR_TILE_STATE && DEST_TILE( x, y + 1 ) == FLOOR_TILE_STATE )
+        if ( IS_TILE_NON_SOLID( x, y + 1 ) )
         {
             DEST_TILE( x, y ) = wall;
             DEST_TILE( x, y + 1 ) = car;
@@ -1015,7 +1070,7 @@ void moveFast( int *data, int *dst, int x, int y, int dir, int wall, int car )
 {
     if ( dir == DIR_R )
     {
-        if ( TILE( x + 1, y ) == FLOOR_TILE_STATE && DEST_TILE( x + 1, y ) == FLOOR_TILE_STATE )
+        if ( IS_TILE_NON_SOLID( x + 1, y ) )
         {
             DEST_TILE( x, y ) = wall;
             DEST_TILE( x + 1, y ) = car;
@@ -1029,7 +1084,7 @@ void moveFast( int *data, int *dst, int x, int y, int dir, int wall, int car )
     }
     else if ( dir == DIR_L )
     {
-        if ( TILE( x - 1, y ) == FLOOR_TILE_STATE && DEST_TILE( x - 1, y ) == FLOOR_TILE_STATE )
+        if ( IS_TILE_NON_SOLID( x - 1, y ) )
         {
             DEST_TILE( x, y ) = wall;
             DEST_TILE( x - 1, y ) = car;
@@ -1044,7 +1099,7 @@ void moveFast( int *data, int *dst, int x, int y, int dir, int wall, int car )
     }
     else if ( dir == DIR_U )
     {
-        if ( TILE( x, y - 1 ) == FLOOR_TILE_STATE && DEST_TILE( x, y - 1 ) == FLOOR_TILE_STATE )
+        if ( IS_TILE_NON_SOLID( x, y - 1 ) )
         {
             DEST_TILE( x, y ) = wall;
             DEST_TILE( x, y - 1 ) = car;
@@ -1059,12 +1114,65 @@ void moveFast( int *data, int *dst, int x, int y, int dir, int wall, int car )
     }
     else if ( dir == DIR_D )
     {
-        if ( TILE( x, y + 1 ) == FLOOR_TILE_STATE && DEST_TILE( x, y + 1 ) == FLOOR_TILE_STATE )
+        if ( IS_TILE_NON_SOLID( x, y + 1 ) )
         {
             DEST_TILE( x, y ) = wall;
             DEST_TILE( x, y + 1 ) = car;
             if ( car == PLAYER_CAR_TILE_STATE ) camX = x - 800/16/2;
             if ( car == PLAYER_CAR_TILE_STATE ) camY = y + 1 - 480/16/2;
+        }
+        else
+        { // destroy
+            destroy( data, dst, x, y + 1, TILE( x, y ));
+        }
+    }
+
+}
+void fireRocket( int *data, int *dst, int x, int y, int dir, int wall, int car )
+{
+    int dist = 2; // distance to spawn rocket
+    car = ROCKET_U_TILE_STATE + botdir[0]; // TODO change as soon as bots can fire rockets
+    //if ( car == PLAYER_CAR_TILE_STATE && botTurbo[0] == true ) dist = 2;
+    if ( dir == DIR_R )
+    {
+        if ( IS_TILE_NON_SOLID( x + dist, y ) )
+        {
+            DEST_TILE( x + dist, y ) = car;
+        }
+        else
+        { // destroy
+            destroy( data, dst, x + 1, y, TILE( x, y ) );
+        }
+    }
+    else if ( dir == DIR_L )
+    {
+        if ( IS_TILE_NON_SOLID( x - dist, y ) )
+        {
+            DEST_TILE( x - dist, y ) = car;
+        }
+        else
+        { // destroy
+            destroy( data, dst, x - 1, y, TILE( x, y ));
+        }
+
+    }
+    else if ( dir == DIR_U )
+    {
+        if ( IS_TILE_NON_SOLID( x, y - dist ) )
+        {
+            DEST_TILE( x, y - dist ) = car;
+        }
+        else
+        { // destroy
+            destroy( data, dst, x, y - 1, TILE( x, y ));
+        }
+
+    }
+    else if ( dir == DIR_D )
+    {
+        if ( IS_TILE_NON_SOLID( x, y + dist ) )
+        {
+            DEST_TILE( x, y + dist ) = car;
         }
         else
         { // destroy
