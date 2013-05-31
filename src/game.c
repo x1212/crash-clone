@@ -62,6 +62,7 @@ int timeout; // number of turns until state is set to menu
 int activebots; // number of bots still in the game
 long cycles; // how many turns did this game last already?
 int energy;
+int animatedtiles[256][2]; // coords of tiles of interest (accelleration for gamelogic)
 
 
 
@@ -851,77 +852,77 @@ void fireRocket( int *data, int *dst, int x, int y, int dir, int wall, int car )
 
 void logic( int *data, int *dst, int w, int h )
 {
-    int x, y;
+    int i, n, m, x, y;
     
     // syncronize old and new state before aplying logic
-    for ( x = 0; x < ARENA_W; x++ )
+    for ( i = 0; i < 255; i++ )
     {
-        for ( y = 0; y < ARENA_H; y++ )
+        for ( n = 0; n < 5; n++ )
         {
-            *(dst+(y*ARENA_W + x)) = *(data+(y*ARENA_W + x));
+            for ( m = 0; m < 5; m++ ) *(dst+((animatedtiles[i][1] - 3 + n)*ARENA_W + (animatedtiles[i][0] - 3 + m))) = *(data+((animatedtiles[i][1] - 3 + n)*ARENA_W + (animatedtiles[i][0] - 3 + m)));
         }
     }
 
 
-    for ( x = ARENA_BORDER; x < ARENA_W; x++ )
+    for ( i = 0; x < 255; x++ )
     {
-        for ( y = ARENA_BORDER; y < ARENA_H; y++ )
-        {
-            int dir, wall, car;
-            switch ( TILE( x, y) )
-            {
-                case PLAYER_CAR_TILE_STATE:
-                    dir = botdir[0];
-                    wall = RED_WALL_TILE_STATE;
-                    car = PLAYER_CAR_TILE_STATE;
-                    if ( botTurbo[0] == false ) moveCar( data, dst, x, y, dir, wall, car ); // TODO: add this for bots as well and suport this at higher ai-levels
-                    else moveFast( data, dst, x, y, dir, wall, car );
-                    if ( botRocket[0] == true ) fireRocket( data, dst, x, y, dir, wall, car );
-                    break;
+		int dir, wall, car;
+		x = animatedtiles[i][0];
+		y = animatedtiles[i][1];
+		switch ( TILE( x, y) )
+		{
+			case PLAYER_CAR_TILE_STATE:
+				dir = botdir[0];
+				wall = RED_WALL_TILE_STATE;
+				car = PLAYER_CAR_TILE_STATE;
+				if ( botTurbo[0] == false ) moveCar( data, dst, x, y, dir, wall, car ); // TODO: add this for bots as well and suport this at higher ai-levels
+				else moveFast( data, dst, x, y, dir, wall, car );
+				if ( botRocket[0] == true ) fireRocket( data, dst, x, y, dir, wall, car );
+				break;
 
 
 
 
-                case CPU_GREEN_CAR_TILE_STATE:
-                    ai(dst,x,y);
-                    dir = botdir[1];
-                    wall = GREEN_WALL_TILE_STATE;
-                    car = CPU_GREEN_CAR_TILE_STATE;
-                    moveCar( data, dst, x, y, dir, wall, car );
-                    break;
+			case CPU_GREEN_CAR_TILE_STATE:
+				ai(dst,x,y);
+				dir = botdir[1];
+				wall = GREEN_WALL_TILE_STATE;
+				car = CPU_GREEN_CAR_TILE_STATE;
+				moveCar( data, dst, x, y, dir, wall, car );
+				break;
 
 
-                case CPU_BLUE_CAR_TILE_STATE:
-                    ai(dst,x,y);
-                    dir = botdir[2];
-                    wall = BLUE_WALL_TILE_STATE;
-                    car = CPU_BLUE_CAR_TILE_STATE;
-                    moveCar( data, dst, x, y, dir, wall, car );
-                    break;
+			case CPU_BLUE_CAR_TILE_STATE:
+				ai(dst,x,y);
+				dir = botdir[2];
+				wall = BLUE_WALL_TILE_STATE;
+				car = CPU_BLUE_CAR_TILE_STATE;
+				moveCar( data, dst, x, y, dir, wall, car );
+				break;
 
 
 
-                case CPU_YELLOW_CAR_TILE_STATE:
-                    ai(dst,x,y);
-                    dir = botdir[3];
-                    wall = YELLOW_WALL_TILE_STATE;
-                    car = CPU_YELLOW_CAR_TILE_STATE;
-                    moveCar( data, dst, x, y, dir, wall, car );
-                    break;
+			case CPU_YELLOW_CAR_TILE_STATE:
+				ai(dst,x,y);
+				dir = botdir[3];
+				wall = YELLOW_WALL_TILE_STATE;
+				car = CPU_YELLOW_CAR_TILE_STATE;
+				moveCar( data, dst, x, y, dir, wall, car );
+				break;
 
 
-                case ROCKET_U_TILE_STATE:
-                case ROCKET_R_TILE_STATE:
-                case ROCKET_D_TILE_STATE:
-                case ROCKET_L_TILE_STATE:
-                    dir = TILE( x, y ) - ROCKET_U_TILE_STATE;
-                    wall = FLOOR_TILE_STATE;
-                    car = TILE( x, y );
-                    moveFast( data, dst, x, y, dir, wall, car );
-                    break;
+			case ROCKET_U_TILE_STATE:
+			case ROCKET_R_TILE_STATE:
+			case ROCKET_D_TILE_STATE:
+			case ROCKET_L_TILE_STATE:
+				dir = TILE( x, y ) - ROCKET_U_TILE_STATE;
+				wall = FLOOR_TILE_STATE;
+				car = TILE( x, y );
+				moveFast( data, dst, x, y, dir, wall, car );
+				break;
 
-            }
-        }
+		}
+	
     }
 }
 
