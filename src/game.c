@@ -68,7 +68,7 @@ int animatedtiles[256][2]; // coords of tiles of interest (accelleration for gam
 
 void initGame( int* data1, int* data2 )
 {
-    int x, y;
+    int x, y, i;
     if ( speed == 0 ) tpt = 50; else if( speed == 1 ) tpt = 38; else if( speed == 2 ) tpt = 25; else if ( speed == 3 ) tpt = 17; else tpt = 100; 
     lastTicks=0;
     camX = 0; camY = 0;
@@ -142,7 +142,21 @@ void initGame( int* data1, int* data2 )
         }
     }
 
-
+	for ( i = 0; i < 256; i++ )
+	{
+		animatedtiles[i][0] = 0;
+		animatedtiles[i][1] = 0;
+	}
+	
+	animatedtiles[0][0] = ((ARENA_H-2*ARENA_BORDER)/4 + ARENA_BORDER);
+	animatedtiles[0][1] = ((ARENA_W-2*ARENA_BORDER)/4 + ARENA_BORDER);
+	animatedtiles[1][0] = 0;
+	animatedtiles[1][1] = 0;
+	animatedtiles[2][0] = 0;
+	animatedtiles[2][1] = 0;
+	animatedtiles[3][0] = 0;
+	animatedtiles[3][1] = 0;
+	
     keystate = SDL_GetKeyState( NULL );
 }
 
@@ -157,7 +171,9 @@ void game( void )
     static bool firstrun = true;
     static int *data1, *data2;
     static int *currentState, *nextState, *tmp;
-
+	
+	//printf("state: %d    gamestate: %d    timeout: %d\n", state, gamestate, timeout);
+	
     if ( firstrun )
     {
         data1 = (int*)malloc(sizeof(int)*ARENA_W*ARENA_H);
@@ -172,7 +188,7 @@ void game( void )
     SDL_PumpEvents(); // update keystates
     
     handleKeyStates();
-    
+    if ( state == 0 ) return;
     // calculate next state
     logic( currentState, nextState, ARENA_W, ARENA_H );
     // swap states
@@ -202,6 +218,7 @@ void game( void )
     } else if ( timeout == 0 )
     {
         SDL_Event event;
+        printf( "timeout!\n" );
         state = 0;
         while ( SDL_PollEvent( &event ) )
         { /* do nothing, we only want all events to be thrown away before returning to menu */}
@@ -238,6 +255,7 @@ void game( void )
 
 
     }
+    //printf("state: %d    gamestate: %d    timeout: %d\n", state, gamestate, timeout);
     lastTicks = SDL_GetTicks();
     cycles++;
 }
@@ -248,6 +266,7 @@ void handleKeyStates( void )
     if ( keystate[SDLK_ESCAPE] | keystate[SDLK_END] )
     {
         SDL_Event event;
+        printf( "exit game!\n");
         state = 0;
         while ( SDL_PollEvent( &event ) )
         { /* do nothing, we only want all events to be thrown away before returning to menu */}
@@ -854,76 +873,89 @@ void logic( int *data, int *dst, int w, int h )
 {
     int i, n, m, x, y;
     
+    
     // syncronize old and new state before aplying logic
-    for ( i = 0; i < 255; i++ )
+    //printf( "sync data\n" );
+    for ( i = 0; i < 256; i++ )
     {
-        for ( n = 0; n < 5; n++ )
-        {
-            for ( m = 0; m < 5; m++ ) *(dst+((animatedtiles[i][1] - 3 + n)*ARENA_W + (animatedtiles[i][0] - 3 + m))) = *(data+((animatedtiles[i][1] - 3 + n)*ARENA_W + (animatedtiles[i][0] - 3 + m)));
-        }
+		if ( animatedtiles[i][0] == animatedtiles[i][1] && animatedtiles[i][0] == 0 ) i = 256;
+		else
+		{
+			for ( n = 0; n < 5; n++ )
+			{
+				for ( m = 0; m < 5; m++ ) *(dst+((animatedtiles[i][1] - 3 + n)*ARENA_W + (animatedtiles[i][0] - 3 + m))) = *(data+((animatedtiles[i][1] - 3 + n)*ARENA_W + (animatedtiles[i][0] - 3 + m)));
+			}
+		}
     }
 
+    //printf( "data synced!\n" );
 
-    for ( i = 0; x < 255; x++ )
+    for ( i = 0; i < 256; i++ )
     {
 		int dir, wall, car;
+		printf("%d\n", i );
 		x = animatedtiles[i][0];
 		y = animatedtiles[i][1];
-		switch ( TILE( x, y) )
+		if ( x == y && x == 0 ) i = 256;
+		else
 		{
-			case PLAYER_CAR_TILE_STATE:
-				dir = botdir[0];
-				wall = RED_WALL_TILE_STATE;
-				car = PLAYER_CAR_TILE_STATE;
-				if ( botTurbo[0] == false ) moveCar( data, dst, x, y, dir, wall, car ); // TODO: add this for bots as well and suport this at higher ai-levels
-				else moveFast( data, dst, x, y, dir, wall, car );
-				if ( botRocket[0] == true ) fireRocket( data, dst, x, y, dir, wall, car );
-				break;
+			switch ( TILE( x, y) )
+			{
+				case PLAYER_CAR_TILE_STATE:
+					dir = botdir[0];
+					wall = RED_WALL_TILE_STATE;
+					car = PLAYER_CAR_TILE_STATE;
+					if ( botTurbo[0] == false ) moveCar( data, dst, x, y, dir, wall, car ); // TODO: add this for bots as well and suport this at higher ai-levels
+					else moveFast( data, dst, x, y, dir, wall, car );
+					if ( botRocket[0] == true ) fireRocket( data, dst, x, y, dir, wall, car );
+					break;
 
 
 
 
-			case CPU_GREEN_CAR_TILE_STATE:
-				ai(dst,x,y);
-				dir = botdir[1];
-				wall = GREEN_WALL_TILE_STATE;
-				car = CPU_GREEN_CAR_TILE_STATE;
-				moveCar( data, dst, x, y, dir, wall, car );
-				break;
+				case CPU_GREEN_CAR_TILE_STATE:
+					ai(dst,x,y);
+					dir = botdir[1];
+					wall = GREEN_WALL_TILE_STATE;
+					car = CPU_GREEN_CAR_TILE_STATE;
+					moveCar( data, dst, x, y, dir, wall, car );
+					break;
 
 
-			case CPU_BLUE_CAR_TILE_STATE:
-				ai(dst,x,y);
-				dir = botdir[2];
-				wall = BLUE_WALL_TILE_STATE;
-				car = CPU_BLUE_CAR_TILE_STATE;
-				moveCar( data, dst, x, y, dir, wall, car );
-				break;
+				case CPU_BLUE_CAR_TILE_STATE:
+					ai(dst,x,y);
+					dir = botdir[2];
+					wall = BLUE_WALL_TILE_STATE;
+					car = CPU_BLUE_CAR_TILE_STATE;
+					moveCar( data, dst, x, y, dir, wall, car );
+					break;
 
 
 
-			case CPU_YELLOW_CAR_TILE_STATE:
-				ai(dst,x,y);
-				dir = botdir[3];
-				wall = YELLOW_WALL_TILE_STATE;
-				car = CPU_YELLOW_CAR_TILE_STATE;
-				moveCar( data, dst, x, y, dir, wall, car );
-				break;
+				case CPU_YELLOW_CAR_TILE_STATE:
+					ai(dst,x,y);
+					dir = botdir[3];
+					wall = YELLOW_WALL_TILE_STATE;
+					car = CPU_YELLOW_CAR_TILE_STATE;
+					moveCar( data, dst, x, y, dir, wall, car );
+					break;
 
 
-			case ROCKET_U_TILE_STATE:
-			case ROCKET_R_TILE_STATE:
-			case ROCKET_D_TILE_STATE:
-			case ROCKET_L_TILE_STATE:
-				dir = TILE( x, y ) - ROCKET_U_TILE_STATE;
-				wall = FLOOR_TILE_STATE;
-				car = TILE( x, y );
-				moveFast( data, dst, x, y, dir, wall, car );
-				break;
-
+				case ROCKET_U_TILE_STATE:
+				case ROCKET_R_TILE_STATE:
+				case ROCKET_D_TILE_STATE:
+				case ROCKET_L_TILE_STATE:
+					dir = TILE( x, y ) - ROCKET_U_TILE_STATE;
+					wall = FLOOR_TILE_STATE;
+					car = TILE( x, y );
+					moveFast( data, dst, x, y, dir, wall, car );
+					break;
+				default:
+					break;
+			}
+		
 		}
-	
-    }
+	}
 }
 
 
