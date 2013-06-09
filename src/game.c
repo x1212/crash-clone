@@ -188,7 +188,11 @@ void game( void )
     SDL_PumpEvents(); // update keystates
     
     handleKeyStates();
-    if ( state == 0 ) return;
+    if ( state == 0 )
+    {
+		firstrun = true;
+		return;
+	}
     // calculate next state
     logic( currentState, nextState, ARENA_W, ARENA_H );
     // swap states
@@ -206,6 +210,10 @@ void game( void )
     if ( state != 1 ) // we ended the game
     {
         firstrun = true; // we want a fresh new game next time
+        free( data1 );
+        free( data2 );
+        printf("exit\n");
+        return;
     }
 
     currentTicks = SDL_GetTicks();
@@ -223,8 +231,9 @@ void game( void )
         while ( SDL_PollEvent( &event ) )
         { /* do nothing, we only want all events to be thrown away before returning to menu */}
         firstrun = true;
-	free( data1 );
+		free( data1 );
         free( data2 );
+        return;
     }
 
     if ( gamestate == WINNER_STATE )
@@ -893,67 +902,74 @@ void logic( int *data, int *dst, int w, int h )
     for ( i = 0; i < 256; i++ )
     {
 		int dir, wall, car;
-		printf("%d\n", i );
+		//printf("%d\n", i );
 		x = animatedtiles[i][0];
 		y = animatedtiles[i][1];
 		if ( x == y && x == 0 ) i = 256;
 		else
 		{
-			switch ( TILE( x, y) )
+			for ( n = -2; n < 3; n++)
 			{
-				case PLAYER_CAR_TILE_STATE:
-					dir = botdir[0];
-					wall = RED_WALL_TILE_STATE;
-					car = PLAYER_CAR_TILE_STATE;
-					if ( botTurbo[0] == false ) moveCar( data, dst, x, y, dir, wall, car ); // TODO: add this for bots as well and suport this at higher ai-levels
-					else moveFast( data, dst, x, y, dir, wall, car );
-					if ( botRocket[0] == true ) fireRocket( data, dst, x, y, dir, wall, car );
-					break;
+				for ( m = -2; m < 3; m++ )
+				{
+
+					switch ( TILE( x+n, y+m) )
+					{
+						case PLAYER_CAR_TILE_STATE:
+							dir = botdir[0];
+							wall = RED_WALL_TILE_STATE;
+							car = PLAYER_CAR_TILE_STATE;
+							if ( botTurbo[0] == false ) moveCar( data, dst, x+n, y+m, dir, wall, car ); // TODO: add this for bots as well and suport this at higher ai-levels
+							else moveFast( data, dst, x+n, y+m, dir, wall, car );
+							if ( botRocket[0] == true ) fireRocket( data, dst, x+n, y+m, dir, wall, car );
+							break;
 
 
 
 
-				case CPU_GREEN_CAR_TILE_STATE:
-					ai(dst,x,y);
-					dir = botdir[1];
-					wall = GREEN_WALL_TILE_STATE;
-					car = CPU_GREEN_CAR_TILE_STATE;
-					moveCar( data, dst, x, y, dir, wall, car );
-					break;
+						case CPU_GREEN_CAR_TILE_STATE:
+							ai(dst,x,y);
+							dir = botdir[1];
+							wall = GREEN_WALL_TILE_STATE;
+							car = CPU_GREEN_CAR_TILE_STATE;
+							moveCar( data, dst, x, y, dir, wall, car );
+							break;
 
 
-				case CPU_BLUE_CAR_TILE_STATE:
-					ai(dst,x,y);
-					dir = botdir[2];
-					wall = BLUE_WALL_TILE_STATE;
-					car = CPU_BLUE_CAR_TILE_STATE;
-					moveCar( data, dst, x, y, dir, wall, car );
-					break;
+						case CPU_BLUE_CAR_TILE_STATE:
+							ai(dst,x,y);
+							dir = botdir[2];
+							wall = BLUE_WALL_TILE_STATE;
+							car = CPU_BLUE_CAR_TILE_STATE;
+							moveCar( data, dst, x, y, dir, wall, car );
+							break;
 
 
 
-				case CPU_YELLOW_CAR_TILE_STATE:
-					ai(dst,x,y);
-					dir = botdir[3];
-					wall = YELLOW_WALL_TILE_STATE;
-					car = CPU_YELLOW_CAR_TILE_STATE;
-					moveCar( data, dst, x, y, dir, wall, car );
-					break;
+						case CPU_YELLOW_CAR_TILE_STATE:
+							ai(dst,x,y);
+							dir = botdir[3];
+							wall = YELLOW_WALL_TILE_STATE;
+							car = CPU_YELLOW_CAR_TILE_STATE;
+							moveCar( data, dst, x, y, dir, wall, car );
+							break;
 
 
-				case ROCKET_U_TILE_STATE:
-				case ROCKET_R_TILE_STATE:
-				case ROCKET_D_TILE_STATE:
-				case ROCKET_L_TILE_STATE:
-					dir = TILE( x, y ) - ROCKET_U_TILE_STATE;
-					wall = FLOOR_TILE_STATE;
-					car = TILE( x, y );
-					moveFast( data, dst, x, y, dir, wall, car );
-					break;
-				default:
-					break;
+						case ROCKET_U_TILE_STATE:
+						case ROCKET_R_TILE_STATE:
+						case ROCKET_D_TILE_STATE:
+						case ROCKET_L_TILE_STATE:
+							dir = TILE( x, y ) - ROCKET_U_TILE_STATE;
+							wall = FLOOR_TILE_STATE;
+							car = TILE( x, y );
+							moveFast( data, dst, x, y, dir, wall, car );
+							break;
+						default:
+							break;
+					}
+				
+				}
 			}
-		
 		}
 	}
 }
