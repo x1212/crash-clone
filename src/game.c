@@ -9,8 +9,8 @@
 #define false 0
 
 
-#define ARENA_H (60*(size+1)*(size+1)+120)
-#define ARENA_W (60*(size+1)*(size+1)+120)
+#define ARENA_H (60*(size+1)*(size+1)+120+1)
+#define ARENA_W (60*(size+1)*(size+1)+120+1)
 #define ARENA_BORDER 60
 
 #define BORDER_TILE_STATE 0
@@ -367,14 +367,14 @@ void drawGrid( int* data, int w, int h )
                 switch (*(data+(y*ARENA_W + x))) {
                     case BORDER_TILE_STATE:
                         tile2draw = 16;
-                        if ( *(data+(y*ARENA_W + x - 1)) != BORDER_TILE_STATE && (y - ARENA_BORDER)%4 != 0 ) tile2draw = 6;
-                        else if ( *(data+(y*ARENA_W + x - 1)) != BORDER_TILE_STATE && (y - ARENA_BORDER)%4 == 0 ) tile2draw = 7;
-                        else if ( *(data+((y + 1)*ARENA_W + x)) != BORDER_TILE_STATE && (x - ARENA_BORDER)%4 != 0 ) tile2draw = 4;
-                        else if ( *(data+((y + 1)*ARENA_W + x)) != BORDER_TILE_STATE && (x - ARENA_BORDER)%4 == 0 ) tile2draw = 5;
-                        else if ( *(data+(y*ARENA_W + x + 1)) != BORDER_TILE_STATE && (y - ARENA_BORDER)%4 != 0 ) tile2draw = 10;
-                        else if ( *(data+(y*ARENA_W + x + 1)) != BORDER_TILE_STATE && (y - ARENA_BORDER)%4 == 0 ) tile2draw = 11;
-                        else if ( *(data+((y - 1)*ARENA_W + x)) != BORDER_TILE_STATE && (x - ARENA_BORDER)%4 != 0 ) tile2draw = 8;
-                        else if ( *(data+((y - 1)*ARENA_W + x)) != BORDER_TILE_STATE && (x - ARENA_BORDER)%4 == 0 ) tile2draw = 9;
+                        if ( *(data+(y*ARENA_W + x - 1)) != BORDER_TILE_STATE && (y - ARENA_BORDER)%6 != 0 ) tile2draw = 6;
+                        else if ( *(data+(y*ARENA_W + x - 1)) != BORDER_TILE_STATE && (y - ARENA_BORDER)%6 == 0 ) tile2draw = 7;
+                        else if ( *(data+((y + 1)*ARENA_W + x)) != BORDER_TILE_STATE && (x - ARENA_BORDER)%6 != 0 ) tile2draw = 4;
+                        else if ( *(data+((y + 1)*ARENA_W + x)) != BORDER_TILE_STATE && (x - ARENA_BORDER)%6 == 0 ) tile2draw = 5;
+                        else if ( *(data+(y*ARENA_W + x + 1)) != BORDER_TILE_STATE && (y - ARENA_BORDER)%6 != 0 ) tile2draw = 10;
+                        else if ( *(data+(y*ARENA_W + x + 1)) != BORDER_TILE_STATE && (y - ARENA_BORDER)%6 == 0 ) tile2draw = 11;
+                        else if ( *(data+((y - 1)*ARENA_W + x)) != BORDER_TILE_STATE && (x - ARENA_BORDER)%6 != 0 ) tile2draw = 8;
+                        else if ( *(data+((y - 1)*ARENA_W + x)) != BORDER_TILE_STATE && (x - ARENA_BORDER)%6 == 0 ) tile2draw = 9;
                         else if ( *(data+((y + 1)*ARENA_W + x + 1)) != BORDER_TILE_STATE ) tile2draw = 12;
                         else if ( *(data+((y + 1)*ARENA_W + x - 1)) != BORDER_TILE_STATE ) tile2draw = 13;
                         else if ( *(data+((y - 1)*ARENA_W + x + 1)) != BORDER_TILE_STATE ) tile2draw = 14;
@@ -383,9 +383,9 @@ void drawGrid( int* data, int w, int h )
 
                         break;
                     case FLOOR_TILE_STATE:
-                        if ( (x - ARENA_BORDER)%4 == 0 ) tile2draw = 1;
-                        if ( tile2draw == 1 && (y - ARENA_BORDER)%4 == 0) tile2draw = 3;
-                        else if ( (y - ARENA_BORDER)%4 == 0 ) tile2draw = 2;
+                        if ( (x - ARENA_BORDER)%6 == 0 ) tile2draw = 1;
+                        if ( tile2draw == 1 && (y - ARENA_BORDER)%6 == 0) tile2draw = 3;
+                        else if ( (y - ARENA_BORDER)%6 == 0 ) tile2draw = 2;
                         break;
                     case PLAYER_CAR_TILE_STATE:
                     case CPU_RED_CAR_TILE_STATE:
@@ -922,6 +922,24 @@ void logic( int *data, int *dst, int w, int h )
 							if ( botTurbo[0] == false ) moveCar( data, dst, x+n, y+m, dir, wall, car ); // TODO: add this for bots as well and suport this at higher ai-levels
 							else moveFast( data, dst, x+n, y+m, dir, wall, car );
 							if ( botRocket[0] == true ) fireRocket( data, dst, x+n, y+m, dir, wall, car );
+							if ( DEST_TILE(x+n, y+m) == PLAYER_CAR_TILE_STATE )
+							{}
+							else if ( DEST_TILE(x+n+1, y+m) == PLAYER_CAR_TILE_STATE )
+							{
+								animatedtiles[i][0] = x+n+1;
+							}
+							else if ( DEST_TILE(x+n-1, y+m) == PLAYER_CAR_TILE_STATE )
+							{
+								animatedtiles[i][0] = x+n-1;
+							}
+							else if ( DEST_TILE(x+n, y+m+1) == PLAYER_CAR_TILE_STATE )
+							{
+								animatedtiles[i][1] = y+m+1;
+							}
+							else if ( DEST_TILE(x+n, y+m-1) == PLAYER_CAR_TILE_STATE )
+							{
+								animatedtiles[i][1] = y+m-1;
+							}
 							break;
 
 
