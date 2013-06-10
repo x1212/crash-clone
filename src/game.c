@@ -150,12 +150,12 @@ void initGame( int* data1, int* data2 )
 	
 	animatedtiles[0][0] = ((ARENA_H-2*ARENA_BORDER)/4 + ARENA_BORDER);
 	animatedtiles[0][1] = ((ARENA_W-2*ARENA_BORDER)/4 + ARENA_BORDER);
-	animatedtiles[1][0] = 0;
-	animatedtiles[1][1] = 0;
-	animatedtiles[2][0] = 0;
-	animatedtiles[2][1] = 0;
-	animatedtiles[3][0] = 0;
-	animatedtiles[3][1] = 0;
+	animatedtiles[1][0] = ((ARENA_H-2*ARENA_BORDER)/4*3 + ARENA_BORDER);
+	animatedtiles[1][1] = ((ARENA_W-2*ARENA_BORDER)/4 + ARENA_BORDER);;
+	animatedtiles[2][0] = ((ARENA_H-2*ARENA_BORDER)/4 + ARENA_BORDER);
+	animatedtiles[2][1] = ((ARENA_W-2*ARENA_BORDER)/4*3 + ARENA_BORDER);;
+	animatedtiles[3][0] = ((ARENA_H-2*ARENA_BORDER)/4*3 + ARENA_BORDER);
+	animatedtiles[3][1] = ((ARENA_W-2*ARENA_BORDER)/4*3 + ARENA_BORDER);;
 	
     keystate = SDL_GetKeyState( NULL );
 }
@@ -922,21 +922,21 @@ void logic( int *data, int *dst, int w, int h )
 							if ( botTurbo[0] == false ) moveCar( data, dst, x+n, y+m, dir, wall, car ); // TODO: add this for bots as well and suport this at higher ai-levels
 							else moveFast( data, dst, x+n, y+m, dir, wall, car );
 							if ( botRocket[0] == true ) fireRocket( data, dst, x+n, y+m, dir, wall, car );
-							if ( DEST_TILE(x+n, y+m) == PLAYER_CAR_TILE_STATE )
+							if ( DEST_TILE(x+n, y+m) == TILE( x+n, y+m) )
 							{}
-							else if ( DEST_TILE(x+n+1, y+m) == PLAYER_CAR_TILE_STATE )
+							else if ( DEST_TILE(x+n+1, y+m) == TILE( x+n, y+m) )
 							{
 								animatedtiles[i][0] = x+n+1;
 							}
-							else if ( DEST_TILE(x+n-1, y+m) == PLAYER_CAR_TILE_STATE )
+							else if ( DEST_TILE(x+n-1, y+m) == TILE( x+n, y+m) )
 							{
 								animatedtiles[i][0] = x+n-1;
 							}
-							else if ( DEST_TILE(x+n, y+m+1) == PLAYER_CAR_TILE_STATE )
+							else if ( DEST_TILE(x+n, y+m+1) == TILE( x+n, y+m) )
 							{
 								animatedtiles[i][1] = y+m+1;
 							}
-							else if ( DEST_TILE(x+n, y+m-1) == PLAYER_CAR_TILE_STATE )
+							else if ( DEST_TILE(x+n, y+m-1) == TILE( x+n, y+m) )
 							{
 								animatedtiles[i][1] = y+m-1;
 							}
@@ -951,6 +951,25 @@ void logic( int *data, int *dst, int w, int h )
 							wall = GREEN_WALL_TILE_STATE;
 							car = CPU_GREEN_CAR_TILE_STATE;
 							moveCar( data, dst, x, y, dir, wall, car );
+							// TODO: add rockets and turbo ai here for harder bots
+							if ( DEST_TILE(x+n, y+m) == TILE( x+n, y+m) )
+							{}
+							else if ( DEST_TILE(x+n+1, y+m) == TILE( x+n, y+m) )
+							{
+								animatedtiles[i][0] = x+n+1;
+							}
+							else if ( DEST_TILE(x+n-1, y+m) == TILE( x+n, y+m) )
+							{
+								animatedtiles[i][0] = x+n-1;
+							}
+							else if ( DEST_TILE(x+n, y+m+1) == TILE( x+n, y+m) )
+							{
+								animatedtiles[i][1] = y+m+1;
+							}
+							else if ( DEST_TILE(x+n, y+m-1) == TILE( x+n, y+m) )
+							{
+								animatedtiles[i][1] = y+m-1;
+							}
 							break;
 
 
@@ -960,6 +979,24 @@ void logic( int *data, int *dst, int w, int h )
 							wall = BLUE_WALL_TILE_STATE;
 							car = CPU_BLUE_CAR_TILE_STATE;
 							moveCar( data, dst, x, y, dir, wall, car );
+							if ( DEST_TILE(x+n, y+m) == TILE( x+n, y+m) )
+							{}
+							else if ( DEST_TILE(x+n+1, y+m) == TILE( x+n, y+m) )
+							{
+								animatedtiles[i][0] = x+n+1;
+							}
+							else if ( DEST_TILE(x+n-1, y+m) == TILE( x+n, y+m) )
+							{
+								animatedtiles[i][0] = x+n-1;
+							}
+							else if ( DEST_TILE(x+n, y+m+1) == TILE( x+n, y+m) )
+							{
+								animatedtiles[i][1] = y+m+1;
+							}
+							else if ( DEST_TILE(x+n, y+m-1) == TILE( x+n, y+m) )
+							{
+								animatedtiles[i][1] = y+m-1;
+							}
 							break;
 
 
@@ -970,6 +1007,24 @@ void logic( int *data, int *dst, int w, int h )
 							wall = YELLOW_WALL_TILE_STATE;
 							car = CPU_YELLOW_CAR_TILE_STATE;
 							moveCar( data, dst, x, y, dir, wall, car );
+							if ( DEST_TILE(x+n, y+m) == TILE( x+n, y+m) )
+							{}
+							else if ( DEST_TILE(x+n+1, y+m) == TILE( x+n, y+m) )
+							{
+								animatedtiles[i][0] = x+n+1;
+							}
+							else if ( DEST_TILE(x+n-1, y+m) == TILE( x+n, y+m) )
+							{
+								animatedtiles[i][0] = x+n-1;
+							}
+							else if ( DEST_TILE(x+n, y+m+1) == TILE( x+n, y+m) )
+							{
+								animatedtiles[i][1] = y+m+1;
+							}
+							else if ( DEST_TILE(x+n, y+m-1) == TILE( x+n, y+m) )
+							{
+								animatedtiles[i][1] = y+m-1;
+							}
 							break;
 
 
