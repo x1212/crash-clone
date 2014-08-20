@@ -16,3 +16,8 @@ func goto_scene(scene):
 	current_scene.queue_free()
 	current_scene = s.instance()
 	get_scene().get_root().add_child(current_scene)
+
+func goto_instanced_scene(instanced_scene):
+	current_scene.queue_free()
+	current_scene = instanced_scene
+	get_scene().get_root().add_child(current_scene)

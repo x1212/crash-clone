@@ -17,11 +17,12 @@ func _ready():
 	#red_trail.set_tileset(get_parent().get_node("red").get_tileset())
 	#set_pos(Vector2(64*16,64*16))
 	set_fixed_process(true)
+	speed_setting = get_parent().get_speed()
 	pass
 
 
 
-var wait = 0.1
+var wait = 0.2
 var interp = 0.0
 var dir = 0
 var old_dir = 0
