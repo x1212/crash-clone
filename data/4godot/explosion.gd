@@ -7,12 +7,16 @@ extends Sprite
 
 func _ready():
 	set_process(true)
+	var pos = get_pos()
+	if (pos.x/16 > 32+get_parent().get_parent().size-1 or pos.y/16 < 32 or pos.y/16 > 32+get_parent().get_parent().size-1 or pos.y/16 < 32):
+		queue_free()
 	pass
 
 
 var wait=0.0
 func _process(delta):
 	wait += delta
+	
 	if (wait>=0.1):
 		var rect = get_region_rect()
 		rect.pos.x += 16
