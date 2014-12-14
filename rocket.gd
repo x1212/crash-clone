@@ -129,6 +129,20 @@ func set_inactive():
 		red.remove((pos.x-16)/16,pos.y/16)
 		red.remove(pos.x/16,(pos.y+16)/16)
 		red.remove(pos.x/16,(pos.y-16)/16)
+		red = get_parent().get_node("yellow")
+	if (red extends preload("data/4godot/trails.gd")):
+		red.remove(pos.x/16,pos.y/16)
+		red.remove((pos.x+16)/16,pos.y/16)
+		red.remove((pos.x-16)/16,pos.y/16)
+		red.remove(pos.x/16,(pos.y+16)/16)
+		red.remove(pos.x/16,(pos.y-16)/16)
+		red = get_parent().get_node("green")
+	if (red extends preload("data/4godot/trails.gd")):
+		red.remove(pos.x/16,pos.y/16)
+		red.remove((pos.x+16)/16,pos.y/16)
+		red.remove((pos.x-16)/16,pos.y/16)
+		red.remove(pos.x/16,(pos.y+16)/16)
+		red.remove(pos.x/16,(pos.y-16)/16)
 	
 	#explosions
 	var e1 = explosion_class.instance()

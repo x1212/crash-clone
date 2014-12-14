@@ -8,8 +8,9 @@ extends Sprite
 func _ready():
 	set_process(true)
 	var pos = get_pos()
-	if (pos.x/16 > 32+get_parent().get_parent().size-1 or pos.y/16 < 32 or pos.y/16 > 32+get_parent().get_parent().size-1 or pos.y/16 < 32):
+	if (pos.x/16 > 32+get_parent().get_parent().size - 1 or pos.x/16 < 32 or pos.y/16 > 32+get_parent().get_parent().size-1 or pos.y/16 < 32):
 		queue_free()
+	get_node("SamplePlayer2D").play("explosion")
 	pass
 
 
